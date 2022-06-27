@@ -1,0 +1,11 @@
+cmake-build-debug
+
+# make and build files
+*.lst
+*.o
+*.eep
+*.lss
+*.map
+*.sym
+
+.idea
