@@ -13,6 +13,7 @@
 #include <functional>
 #include <algorithm>
 
+#include "board-server.h"
 #include "tcp-utils.h"
 #include "utilities.h"
 
