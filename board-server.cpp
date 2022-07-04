@@ -29,6 +29,7 @@ void sigquit_handler(int signum) {
 
 char* bulletin_board_file = "bbfile"; // TODO: Will be set while parsing command-line arguments
 int message_number;
+bool delayOperations = false;
 
 class AccessData {
 public:
@@ -74,6 +75,40 @@ void writeToFile(const string& user, const string& message, int socketToRespond)
     close(fd);
 
     sendMessageToSocket(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()), socketToRespond);
+}
+
+void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
+    if (messageNumberToRead >= message_number or messageNumberToRead < 0) {
+        char additionalInfo[255];
+        memset(additionalInfo, 0, sizeof additionalInfo);
+        snprintf(additionalInfo, 255, "%d %s", messageNumberToRead, "The given message-number does not exist.");
+
+        sendMessageToSocket(2.1, "UNKNOWN", additionalInfo, socketToRespond);
+    } else {
+        int fd = open(bulletin_board_file, O_RDONLY,
+                      S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+        // TODO: Handle failure in above gracefully, iff needed
+
+        const int ALEN = 256;
+        char temp[ALEN];
+        int k = 0;
+        while (readline(fd, temp, ALEN - 1) != recv_nodata) {
+            if (k == messageNumberToRead) {
+                break;
+            }
+            k++;
+        }
+
+        close(fd);
+        for (int i = 0; temp[i] != '\0'; i++) {
+            if (temp[i] == '/') {
+                temp[i] = ' ';
+                break;
+            }
+        }
+
+        sendMessageToSocket(2.0, "MESSAGE", temp, socketToRespond);
+    }
 }
 
 void replaceMessageInFile(const string& user, const string& messageNumberAndMessage, int socketToSend) {
@@ -178,37 +213,7 @@ void handle_bulletin_board_client(int master_socket) {
                 writeToFile(user, tokens[1], slave_socket);
             } else if (inputCommand.rfind("READ", 0) == 0) {
                 const int messageNumberToRead = stoi(tokens[1].c_str());
-
-                if (messageNumberToRead >= message_number or messageNumberToRead < 0) {
-                    char additionalInfo[255];
-                    memset(additionalInfo, 0, sizeof additionalInfo);
-                    snprintf(additionalInfo, 255, "%d %s", messageNumberToRead, "The given message-number does not exist.");
-
-                    sendMessage(2.1, "UNKNOWN", additionalInfo);
-                } else {
-                    int fd = open(bulletin_board_file, O_RDONLY,
-                                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-                    // TODO: Handle failure in above gracefully, iff needed
-
-                    char temp[ALEN];
-                    int k = 0;
-                    while (readline(fd, temp, ALEN - 1) != recv_nodata) {
-                        if (k == messageNumberToRead) {
-                            break;
-                        }
-                        k++;
-                    }
-
-                    close(fd);
-                    for (int i = 0; temp[i] != '\0'; i++) {
-                        if (temp[i] == '/') {
-                            temp[i] = ' ';
-                            break;
-                        }
-                    }
-
-                    sendMessage(2.0, "MESSAGE", temp);
-                }
+                readMessageFromFile(messageNumberToRead, slave_socket);
             } else if (inputCommand.rfind("REPLACE", 0) == 0) {
                 replaceMessageInFile(user, tokens[1], slave_socket);
             } else {
