@@ -19,6 +19,9 @@
 
 using namespace std;
 
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
 void sighup_handler(int signum) {
     cout << "Inside handler function for signal sighup." << endl;
 }
@@ -29,7 +32,7 @@ void sigquit_handler(int signum) {
 
 char* bulletin_board_file = "bbfile"; // TODO: Will be set while parsing command-line arguments
 int message_number;
-bool delayOperations = false;
+bool delayOperations = true;
 
 class AccessData {
 public:
@@ -64,6 +67,28 @@ void sendMessageToSocket(float code, char responseText[], char additionalInfo[],
 void writeToFile(const string& user, const string& message, int socketToRespond) {
     cout << "Message received from user: " << user << " => " << message << endl;
 
+    size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
+    if (delayOperations) {
+        cout << "Waiting to enter Critical Region. WRITE operation by thread - " << threadId
+             << " pending!" << endl;
+    }
+    pthread_mutex_lock(&mut);
+    concurrencyManagementData.num_writers_waiting += 1;
+
+    while (concurrencyManagementData.num_readers_active > 0 or
+           concurrencyManagementData.writer_active) {
+        pthread_cond_wait(&cond, &mut);
+    }
+    concurrencyManagementData.num_writers_waiting -= 1;
+    concurrencyManagementData.writer_active = true;
+    pthread_mutex_unlock(&mut);
+
+    if (delayOperations) {
+        cout << "Entered Critical Region. WRITE operation by thread - " << threadId << " started!"
+             << endl;
+        sleep(12);
+    }
+
     int fd = open(bulletin_board_file, O_WRONLY | O_APPEND,
                   S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
@@ -73,6 +98,15 @@ void writeToFile(const string& user, const string& message, int socketToRespond)
 
     write(fd, message_line, strlen(message_line));
     close(fd);
+
+    if (delayOperations) {
+        cout << "Exiting Critical Region. WRITE operation by thread - " << threadId << " completed!"
+             << endl;
+    }
+    pthread_mutex_lock(&mut);
+    concurrencyManagementData.writer_active = false;
+    pthread_cond_broadcast(&cond);
+    pthread_mutex_unlock(&mut);
 
     sendMessageToSocket(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()), socketToRespond);
 }
@@ -85,6 +119,27 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
 
         sendMessageToSocket(2.1, "UNKNOWN", additionalInfo, socketToRespond);
     } else {
+        size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
+        if (delayOperations) {
+            cout << "Waiting to enter Critical Region. READ operation by thread - " << threadId
+                 << " pending!"
+                 << endl;
+        }
+        pthread_mutex_lock(&mut);
+
+        while (concurrencyManagementData.num_writers_waiting > 0 or
+                concurrencyManagementData.writer_active) {
+            pthread_cond_wait(&cond, &mut);
+        }
+        concurrencyManagementData.num_readers_active += 1;
+        pthread_mutex_unlock(&mut);
+
+        if (delayOperations) {
+            cout << "Entered Critical Region. READ operation by thread - " << threadId << " started!"
+                 << endl;
+            sleep(8);
+        }
+
         int fd = open(bulletin_board_file, O_RDONLY,
                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
         // TODO: Handle failure in above gracefully, iff needed
@@ -100,6 +155,18 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
         }
 
         close(fd);
+
+        if (delayOperations) {
+            cout << "Exiting Critical Region. READ operation by thread - " << threadId << " completed!"
+                 << endl;
+        }
+        pthread_mutex_lock(&mut);
+        concurrencyManagementData.num_readers_active -= 1;
+        if (concurrencyManagementData.num_readers_active == 0) {
+            pthread_cond_broadcast(&cond);
+        }
+        pthread_mutex_unlock(&mut);
+
         for (int i = 0; temp[i] != '\0'; i++) {
             if (temp[i] == '/') {
                 temp[i] = ' ';
@@ -121,6 +188,28 @@ void replaceMessageInFile(const string& user, const string& messageNumberAndMess
     if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
         sendMessageToSocket(3.1, "UNKNOWN", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()), socketToSend);
     } else {
+        size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
+        if (delayOperations) {
+            cout << "Waiting to enter Critical Region. REPLACE operation by thread - " << threadId
+                 << " pending!" << endl;
+        }
+        pthread_mutex_lock(&mut);
+        concurrencyManagementData.num_writers_waiting += 1;
+
+        while (concurrencyManagementData.num_readers_active > 0 or
+               concurrencyManagementData.writer_active) {
+            pthread_cond_wait(&cond, &mut);
+        }
+        concurrencyManagementData.num_writers_waiting -= 1;
+        concurrencyManagementData.writer_active = true;
+        pthread_mutex_unlock(&mut);
+
+        if (delayOperations) {
+            cout << "Entered Critical Region. REPLACE operation by thread - " << threadId << " started!"
+                 << endl;
+            sleep(12);
+        }
+
         int fd = open(bulletin_board_file, O_RDONLY,
                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
         int fd2 = open("tempfile", O_WRONLY | O_CREAT,
@@ -150,6 +239,15 @@ void replaceMessageInFile(const string& user, const string& messageNumberAndMess
         unlink(bulletin_board_file);
         close(fd2);
         rename("tempfile", bulletin_board_file);
+
+        if (delayOperations) {
+            cout << "Exiting Critical Region. WRITE operation by thread - " << threadId << " completed!"
+                 << endl;
+        }
+        pthread_mutex_lock(&mut);
+        concurrencyManagementData.writer_active = false;
+        pthread_cond_broadcast(&cond);
+        pthread_mutex_unlock(&mut);
 
         sendMessageToSocket(3.0, "WROTE", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()), socketToSend);
     }
@@ -236,7 +334,7 @@ void handle_bulletin_board_client(int master_socket) {
 
 int main(int argc, char **argv, char *envp[]) {
     const int port = 9000;
-    int tmax = 1;
+    int tmax = 4;
 
     long int master_socket = passivesocket(port, 32);
 
