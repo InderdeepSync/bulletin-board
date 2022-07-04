@@ -30,6 +30,15 @@ void sigquit_handler(int signum) {
 char* bulletin_board_file = "bbfile"; // TODO: Will be set while parsing command-line arguments
 int message_number;
 
+class AccessData {
+public:
+    int num_readers_active;
+    int num_writers_waiting;
+    bool writer_active;
+};
+
+AccessData concurrencyManagementData = AccessData{};
+
 int obtain_initial_message_number() {
     const int ALEN = 256;
     char req[ALEN];
@@ -42,6 +51,29 @@ int obtain_initial_message_number() {
     }
     close(fd);
     return l;
+}
+
+void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend) {
+    char buffer[255];
+    memset(buffer, 0, sizeof buffer);
+    snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
+    send(socketToSend, buffer, sizeof(buffer), 0);
+}
+
+void writeToFile(const string& user, const string& message, int socketToRespond) {
+    cout << "Message received from user: " << user << " => " << message << endl;
+
+    int fd = open(bulletin_board_file, O_WRONLY | O_APPEND,
+                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+
+    char message_line[255];
+    memset(message_line, 0, sizeof message_line);
+    snprintf(message_line, 255, "%d/%s/%s\n", message_number, user.c_str(), message.c_str());
+
+    write(fd, message_line, strlen(message_line));
+    close(fd);
+
+    sendMessageToSocket(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()), socketToRespond);
 }
 
 void handle_bulletin_board_client(int master_socket) {
@@ -68,11 +100,9 @@ void handle_bulletin_board_client(int master_socket) {
         send(slave_socket, initialResponse, strlen(initialResponse), 0);
 
         auto sendMessage = [&](float code, char responseText[], char additionalInfo[]) {
-            char buffer[255];
-            memset(buffer, 0, sizeof buffer);
-            snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
-            send(slave_socket, buffer, sizeof(buffer), 0);
+            sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
+
 
         const int ALEN = 256;
         char req[ALEN];
@@ -102,19 +132,7 @@ void handle_bulletin_board_client(int master_socket) {
                     sendMessage(1.0, "HELLO", const_cast<char *>(user.c_str()));
                 }
             } else if (inputCommand.rfind("WRITE", 0) == 0) {
-                cout << "Message received from user: " << user << " => " << tokens[1] << endl;
-
-                int fd = open(bulletin_board_file, O_WRONLY | O_APPEND,
-                              S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-
-                char message_line[255];
-                memset(message_line, 0, sizeof message_line);
-                snprintf(message_line, 255, "%d/%s/%s\n", message_number, user.c_str(), tokens[1].c_str());
-
-                write(fd, message_line, strlen(message_line));
-                close(fd);
-
-                sendMessage(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()));
+                writeToFile(user, tokens[1], slave_socket);
             } else if (inputCommand.rfind("READ", 0) == 0) {
                 const int messageNumberToRead = stoi(tokens[1].c_str());
 
