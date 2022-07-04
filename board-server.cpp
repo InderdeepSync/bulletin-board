@@ -76,6 +76,50 @@ void writeToFile(const string& user, const string& message, int socketToRespond)
     sendMessageToSocket(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()), socketToRespond);
 }
 
+void replaceMessageInFile(const string& user, const string& messageNumberAndMessage, int socketToSend) {
+    vector<string> replaceArguments;
+    tokenize(messageNumberAndMessage, "/", replaceArguments);
+
+    const int messageNumberToReplace = stoi(replaceArguments[0]);
+    string new_message = replaceArguments[1];
+
+    if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
+        sendMessageToSocket(3.1, "UNKNOWN", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()), socketToSend);
+    } else {
+        int fd = open(bulletin_board_file, O_RDONLY,
+                      S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+        int fd2 = open("tempfile", O_WRONLY | O_CREAT,
+                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+
+        const int ALEN = 256;
+        int l = 0; char textLine[ALEN];
+
+        while (readline(fd, textLine, ALEN - 1) != recv_nodata) {
+            vector<string> messageTokens;
+            tokenize(string(textLine), "/", messageTokens);
+
+            if (l == messageNumberToReplace) {
+                char lineToStore[4096];
+                memset(lineToStore, 0, sizeof lineToStore);
+                snprintf(lineToStore, 4096, "%s/%s/%s", messageTokens[0].c_str(), user.c_str(), new_message.c_str());
+
+                write(fd2, lineToStore, strlen(lineToStore));
+            } else {
+                write(fd2, textLine, strlen(textLine));
+            }
+            write(fd2, "\n", 1);
+            l++;
+        }
+
+        close(fd);
+        unlink(bulletin_board_file);
+        close(fd2);
+        rename("tempfile", bulletin_board_file);
+
+        sendMessageToSocket(3.0, "WROTE", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()), socketToSend);
+    }
+}
+
 void handle_bulletin_board_client(int master_socket) {
     pthread_t currentThread = pthread_self();
     cout << "New Thread " << currentThread <<  " launched." << endl;
@@ -102,7 +146,6 @@ void handle_bulletin_board_client(int master_socket) {
         auto sendMessage = [&](float code, char responseText[], char additionalInfo[]) {
             sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
-
 
         const int ALEN = 256;
         char req[ALEN];
@@ -167,46 +210,7 @@ void handle_bulletin_board_client(int master_socket) {
                     sendMessage(2.0, "MESSAGE", temp);
                 }
             } else if (inputCommand.rfind("REPLACE", 0) == 0) {
-                vector<string> replaceArguments;
-                tokenize(tokens[1], "/", replaceArguments);
-
-                const int messageNumberToReplace = stoi(replaceArguments[0]);
-                string new_message = replaceArguments[1];
-
-                if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
-                    sendMessage(3.1, "UNKNOWN", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()));
-                } else {
-                    int fd = open(bulletin_board_file, O_RDONLY,
-                                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-                    int fd2 = open("tempfile", O_WRONLY | O_CREAT,
-                                   S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-
-                    int l = 0; char textLine[ALEN];
-
-                    while (readline(fd, textLine, ALEN - 1) != recv_nodata) {
-                        vector<string> messageTokens;
-                        tokenize(string(textLine), "/", messageTokens);
-
-                        if (l == messageNumberToReplace) {
-                            char lineToStore[4096];
-                            memset(lineToStore, 0, sizeof lineToStore);
-                            snprintf(lineToStore, 4096, "%s/%s/%s", messageTokens[0].c_str(), user.c_str(), new_message.c_str());
-
-                            write(fd2, lineToStore, strlen(lineToStore));
-                        } else {
-                            write(fd2, textLine, strlen(textLine));
-                        }
-                        write(fd2, "\n", 1);
-                        l++;
-                    }
-
-                    close(fd);
-                    unlink(bulletin_board_file);
-                    close(fd2);
-                    rename("tempfile", bulletin_board_file);
-
-                    sendMessage(3.0, "WROTE", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()));
-                }
+                replaceMessageInFile(user, tokens[1], slave_socket);
             } else {
                 sendMessage(0.0, "ERROR", "Invalid Command Entered!");
             }
