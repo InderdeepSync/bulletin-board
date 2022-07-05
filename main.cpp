@@ -150,25 +150,26 @@ int main(int argc, char **argv, char *envp[]) {
     signal(SIGPIPE, SIG_IGN);
     umask(0137);
 
-    int numberOfPeers = argc - optind;
-    for (int i = 0; i < numberOfPeers; i++) {
+    int numberOfPeersSpecifiedViaCommandLine = argc - optind;
+    for (int i = 0; i < numberOfPeersSpecifiedViaCommandLine; i++) {
         peers.emplace_back(string(argv[i + optind]));
     }
 
     string delayReadWriteString = debuggingModeEnabled ? "true" : "false";
     char* delayOperations = const_cast<char *>(delayReadWriteString.c_str());
 
-    char* board_server_arguments[numberOfPeers + 6];
+    int totalPeers = peers.size();
+    char* board_server_arguments[totalPeers + 6];
     board_server_arguments[0] = "executableName";
     board_server_arguments[1] = strdup(std::to_string(bulletinBoardServerPort).c_str());
     board_server_arguments[2] = delayOperations;
     board_server_arguments[3] = const_cast<char *>(bbfile.c_str());
     board_server_arguments[4] = strdup(std::to_string(tmax).c_str());
 
-    for (int i = 0; i < numberOfPeers; i++) {
-        board_server_arguments[i + 5] = const_cast<char *>(argv[i + optind]);
+    for (int i = 0; i < totalPeers; i++) {
+        board_server_arguments[i + 5] = const_cast<char *>(peers[i].c_str());
     }
-    board_server_arguments[numberOfPeers + 5] = nullptr;
+    board_server_arguments[totalPeers + 5] = nullptr;
 
     pthread_t tt;
     pthread_attr_t ta;
