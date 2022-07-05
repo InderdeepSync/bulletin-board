@@ -22,11 +22,11 @@ using namespace std;
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-void sighup_handler(int signum) {
+void sighup_handler(int signum) { // TODO: To be implemented
     cout << "Inside handler function for signal sighup." << endl;
 }
 
-void sigquit_handler(int signum) {
+void sigquit_handler(int signum) { // TODO: To be implemented
     cout << "Inside handler function for signal sigquit." << endl;
 }
 
