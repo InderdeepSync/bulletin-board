@@ -18,6 +18,7 @@
 
 #include "tcp-utils.h"
 #include "utilities.h"
+#include "board-server.h"
 
 using namespace std;
 
@@ -115,6 +116,11 @@ int main(int argc, char **argv, char *envp[]) {
         }
     }
 
+    if (bbfile.empty()) {
+        cout << "Neither the configuration file " << configurationFile << " nor the command-line specified the required parameter bbfile. Server unable to start." << endl;
+        return 1;
+    }
+
     if (isDaemon) {
         int background_process = fork();
         if (background_process < 0) {
@@ -149,8 +155,28 @@ int main(int argc, char **argv, char *envp[]) {
         peers.emplace_back(string(argv[i + optind]));
     }
 
-    if (bbfile.empty()) {
-        cout << "Neither the configuration file " << configurationFile << " nor the command-line specified the required parameter bbfile. Server unable to start." << endl;
+    string delayReadWriteString = debuggingModeEnabled ? "true" : "false";
+    char* delayOperations = const_cast<char *>(delayReadWriteString.c_str());
+
+    char* board_server_arguments[numberOfPeers + 6];
+    board_server_arguments[0] = "executableName";
+    board_server_arguments[1] = strdup(std::to_string(bulletinBoardServerPort).c_str());
+    board_server_arguments[2] = delayOperations;
+    board_server_arguments[3] = const_cast<char *>(bbfile.c_str());
+    board_server_arguments[4] = strdup(std::to_string(tmax).c_str());
+
+    for (int i = 0; i < numberOfPeers; i++) {
+        board_server_arguments[i + 5] = const_cast<char *>(argv[i + optind]);
+    }
+    board_server_arguments[numberOfPeers + 5] = nullptr;
+
+    pthread_t tt;
+    pthread_attr_t ta;
+    pthread_attr_init(&ta);
+    pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
+
+    if (pthread_create(&tt, &ta, (void* (*) (void*)) board_server, (void*)board_server_arguments) != 0) {
+        perror("pthread_create");
         return 1;
     }
 

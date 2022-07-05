@@ -1,6 +1,3 @@
-//
-// Created by inderdeepsync on 6/27/22.
-//
 
 #ifndef BULLETIN_BOARD_TCP_UTILS_H
 #define BULLETIN_BOARD_TCP_UTILS_H
@@ -14,8 +11,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cerrno>
-
-// extern int errno;
 
 
 /*** Error codes: ***/

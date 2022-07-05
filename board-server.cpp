@@ -30,9 +30,10 @@ void sigquit_handler(int signum) { // TODO: To be implemented
     cout << "Inside handler function for signal sigquit." << endl;
 }
 
-char* bulletin_board_file = "bbfile";
+char* bulletin_board_file;
 int message_number;
-bool delayOperations = true;
+bool delayOperations;
+vector<string> peersList;
 
 class AccessData {
 public:
@@ -86,7 +87,7 @@ void writeToFile(const string& user, const string& message, int socketToRespond)
     if (delayOperations) {
         cout << "Entered Critical Region. WRITE operation by thread - " << threadId << " started!"
              << endl;
-        sleep(12);
+        sleep(6);
     }
 
     int fd = open(bulletin_board_file, O_WRONLY | O_APPEND,
@@ -137,7 +138,7 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
         if (delayOperations) {
             cout << "Entered Critical Region. READ operation by thread - " << threadId << " started!"
                  << endl;
-            sleep(8);
+            sleep(3);
         }
 
         int fd = open(bulletin_board_file, O_RDONLY,
@@ -207,7 +208,7 @@ void replaceMessageInFile(const string& user, const string& messageNumberAndMess
         if (delayOperations) {
             cout << "Entered Critical Region. REPLACE operation by thread - " << threadId << " started!"
                  << endl;
-            sleep(12);
+            sleep(6);
         }
 
         int fd = open(bulletin_board_file, O_RDONLY,
@@ -333,11 +334,19 @@ void handle_bulletin_board_client(int master_socket) {
     }
 }
 
-int main(int argc, char **argv, char *envp[]) {
-    const int bp = 9001;
-    int tmax = 4;
+int board_server(char **argv) {
+    const int port = atoi(argv[1]);
+    delayOperations = strcmp(argv[2], "true") == 0;
+    bulletin_board_file = argv[3];
+    int tmax = atoi(argv[4]);
 
-    long int master_socket = passivesocket(bp, 32);
+    int i = 5;
+    while (argv[i] != nullptr) {
+        peersList.emplace_back(argv[i]);
+        i++;
+    }
+
+    long int master_socket = passivesocket(port, 32);
 
     if (master_socket < 0) {
         perror("passive_socket");
@@ -347,7 +356,7 @@ int main(int argc, char **argv, char *envp[]) {
     int reuse;
     setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
-    cout << "Bulletin Board Server up and listening on port " << bp << endl;
+    cout << "Bulletin Board Server up and listening on port " << port << endl;
 
     // Setting up the thread creation:
     pthread_t tt;
@@ -376,5 +385,8 @@ int main(int argc, char **argv, char *envp[]) {
     return 0;
 }
 
+//int main(int argc, char **argv, char *envp[]) {
+//    board_server(argv);
+//}
 
 
