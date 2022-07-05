@@ -22,6 +22,8 @@ using namespace std;
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
+extern char* greetingText;
+
 void sighup_handler(int signum) { // TODO: To be implemented
     cout << "Inside handler function for signal sighup." << endl;
 }
@@ -36,10 +38,10 @@ bool delayOperations;
 vector<string> peersList;
 
 class AccessData {
-public:
-    int num_readers_active;
-    int num_writers_waiting;
-    bool writer_active;
+    public:
+        int num_readers_active;
+        int num_writers_waiting;
+        bool writer_active;
 };
 
 AccessData concurrencyManagementData = AccessData{};
@@ -274,12 +276,11 @@ void handle_bulletin_board_client(int master_socket) {
 
         cout << "########## New Remote Client Accepted ##########" << endl;
 
-        char* initialResponse = "0.0 Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg\n";
-        send(slave_socket, initialResponse, strlen(initialResponse), 0);
-
         auto sendMessage = [&](float code, char responseText[], char additionalInfo[]) {
             sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
+
+        sendMessage(0.0, "", greetingText);
 
         const int ALEN = 256;
         char req[ALEN];

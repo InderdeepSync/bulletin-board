@@ -32,6 +32,8 @@ int createSocket(string &valueRHOST, string &valueRPORT, int &socketId) {
 
 const std::string WHITESPACE = " \n\r\t\f\v";
 
+char* greetingText = "Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg";
+
 std::string ltrim(const std::string &s) {
     size_t start = s.find_first_not_of(WHITESPACE);
     return (start == std::string::npos) ? "" : s.substr(start);
