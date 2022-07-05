@@ -13,21 +13,41 @@
 #include <functional>
 #include <algorithm>
 #include <sys/ioctl.h>
+#include <unistd.h>
+#include <getopt.h>
 
 #include "tcp-utils.h"
 #include "utilities.h"
 
 using namespace std;
 
+string getConfigurationFileParameterFromTerminal(int argc, char **argv) {
+    string configurationFile;
+
+    int c;
+    while ((c = getopt(argc, argv, "b:T:p:s:fdc:")) != -1) {
+        if ((char)c == 'c') {
+            configurationFile = string(optarg);
+            cout << "configuration file specified via command line as => " << configurationFile << endl;
+        }
+    }
+    optind = 0; // To reset getopt
+    return configurationFile;
+}
+
 int main(int argc, char **argv, char *envp[]) {
     int tmax = 20, bulletinBoardServerPort = 9000, syncServerPort = 10000;
     bool isDaemon = true, debuggingModeEnabled = false;
     vector<string> peers; // possibly empty => implies a Non-Replicated, single node Server
-
     string bbfile;
-    char* configurationFile = "./bbserv.conf"; // TODO: May be specified via command-line parameter
 
-    int file = open(configurationFile, O_RDONLY,
+    string configurationFile = getConfigurationFileParameterFromTerminal(argc, argv);
+    if (configurationFile.empty()) {
+        configurationFile = "./bbserv.conf";
+        cout << "No configuration file specified via command line. The default " << configurationFile << " shall be used." << endl;
+    }
+
+    int file = open(configurationFile.c_str(), O_RDONLY,
                   S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
     if (file != -1) {
         // The file exists on disk. No processing would have been necessary if the file was not present.
@@ -68,7 +88,7 @@ int main(int argc, char **argv, char *envp[]) {
     }
 
     int c;
-    while ((c = getopt(argc, argv, "b:T:p:s:fd")) != -1) {
+    while ((c = getopt(argc, argv, "b:T:p:s:fdc:")) != -1) {
         if ((char)c == 'b') {
             bbfile = string(optarg);
             cout << "bbfile configured via command line as => " << bbfile << endl;
