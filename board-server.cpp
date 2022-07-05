@@ -30,7 +30,7 @@ void sigquit_handler(int signum) {
     cout << "Inside handler function for signal sigquit." << endl;
 }
 
-char* bulletin_board_file = "bbfile"; // TODO: Will be set while parsing command-line arguments
+char* bulletin_board_file = "bbfile";
 int message_number;
 bool delayOperations = true;
 
@@ -273,7 +273,7 @@ void handle_bulletin_board_client(int master_socket) {
 
         cout << "########## New Remote Client Accepted ##########" << endl;
 
-        char* initialResponse = "0.0 Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n";
+        char* initialResponse = "0.0 Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg\n";
         send(slave_socket, initialResponse, strlen(initialResponse), 0);
 
         auto sendMessage = [&](float code, char responseText[], char additionalInfo[]) {
@@ -300,6 +300,7 @@ void handle_bulletin_board_client(int master_socket) {
             if (inputCommand.rfind("QUIT", 0) == 0) {
                 break;
             } else if (inputCommand.rfind("USER", 0) == 0) {
+                // TODO: How to handle multiple USER commands during a single session??
                 if (tokens[1].find('/') != std::string::npos) {
                     // The name supplied by client contains '/', which isn't allowed
                     sendMessage(1.2, "ERROR USER", "The 'username' argument cannot contain '/'");
@@ -333,10 +334,10 @@ void handle_bulletin_board_client(int master_socket) {
 }
 
 int main(int argc, char **argv, char *envp[]) {
-    const int port = 9000;
+    const int bp = 9001;
     int tmax = 4;
 
-    long int master_socket = passivesocket(port, 32);
+    long int master_socket = passivesocket(bp, 32);
 
     if (master_socket < 0) {
         perror("passive_socket");
@@ -346,7 +347,7 @@ int main(int argc, char **argv, char *envp[]) {
     int reuse;
     setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
-    cout << "Bulletin Board Server up and listening on port " << port << endl;
+    cout << "Bulletin Board Server up and listening on port " << bp << endl;
 
     // Setting up the thread creation:
     pthread_t tt;

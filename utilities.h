@@ -15,4 +15,8 @@ void tokenize(std::string const &str, const char *delim,
 
 int createSocket(string &valueRHOST, string &valueRPORT, int &socketId);
 
+std::string trim(const std::string &s);
+
+bool is_true(const string& value);
+
 #endif

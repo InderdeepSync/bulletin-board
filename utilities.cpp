@@ -29,3 +29,24 @@ int createSocket(string &valueRHOST, string &valueRPORT, int &socketId) {
     cout << "Successfully connected to remote host " << valueRHOST << ":" << valueRPORT << " via socketId="<< socketId << endl;
     return 0;
 }
+
+const std::string WHITESPACE = " \n\r\t\f\v";
+
+std::string ltrim(const std::string &s) {
+    size_t start = s.find_first_not_of(WHITESPACE);
+    return (start == std::string::npos) ? "" : s.substr(start);
+}
+
+std::string rtrim(const std::string &s) {
+    size_t end = s.find_last_not_of(WHITESPACE);
+    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+}
+
+std::string trim(const std::string &s) {
+    return rtrim(ltrim(s));
+}
+
+bool is_true(const string& value) {
+    vector<string> truthyValues = {"1", "true"};
+    return std::find(truthyValues.begin(), truthyValues.end(), value) != truthyValues.end();
+};
