@@ -97,7 +97,7 @@ void writeToFile(const string& user, const string& message, int socketToRespond)
 
     char message_line[255];
     memset(message_line, 0, sizeof message_line);
-    snprintf(message_line, 255, "%d/%s/%s\n", message_number, user.c_str(), message.c_str());
+    snprintf(message_line, 255, "%d/%s/%s\n", message_number++, user.c_str(), message.c_str());
 
     write(fd, message_line, strlen(message_line));
     close(fd);
@@ -111,7 +111,7 @@ void writeToFile(const string& user, const string& message, int socketToRespond)
     pthread_cond_broadcast(&cond);
     pthread_mutex_unlock(&mut);
 
-    sendMessageToSocket(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()), socketToRespond);
+    sendMessageToSocket(3.0, "WROTE", const_cast<char*>(std::to_string(message_number - 1).c_str()), socketToRespond);
 }
 
 void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
