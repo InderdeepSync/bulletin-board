@@ -30,9 +30,22 @@ int createSocket(string &valueRHOST, string &valueRPORT, int &socketId) {
     return 0;
 }
 
+void cleanup_handler(void *arg ) {
+    int *socketToClose = (int *) arg;
+
+    close(*socketToClose);
+    cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
+}
+
+void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend) {
+    char buffer[255];
+    memset(buffer, 0, sizeof buffer);
+    snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
+    send(socketToSend, buffer, sizeof(buffer), 0);
+}
+
 const std::string WHITESPACE = " \n\r\t\f\v";
 
-char* greetingText = "Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg";
 
 std::string ltrim(const std::string &s) {
     size_t start = s.find_first_not_of(WHITESPACE);

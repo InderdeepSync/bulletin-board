@@ -2,8 +2,10 @@
 #ifndef BULLETIN_BOARD_BOARD_SERVER_H
 #define BULLETIN_BOARD_BOARD_SERVER_H
 
-void sighup_handler(int signum);
-
 int board_server(char **argv);
+
+void bulletin_board_sighup_handler(int signum);
+
+void bulletin_board_sigquit_handler(int signum);
 
 #endif //BULLETIN_BOARD_BOARD_SERVER_H

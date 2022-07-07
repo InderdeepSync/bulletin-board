@@ -15,6 +15,12 @@ void tokenize(std::string const &str, const char *delim,
 
 int createSocket(string &valueRHOST, string &valueRPORT, int &socketId);
 
+void cleanup_handler(void *arg );
+
+void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend);
+
+static const string bulletinBoardGreetingText = "Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg";
+
 std::string trim(const std::string &s);
 
 bool is_true(const string& value);

@@ -19,8 +19,20 @@
 #include "tcp-utils.h"
 #include "utilities.h"
 #include "board-server.h"
+#include "sync-server.h"
 
 using namespace std;
+
+void super_sighup_handler(int signum) {
+    bulletin_board_sighup_handler(signum);
+    sync_server_sighup_handler(signum);
+}
+
+void super_sigquit_handler(int signum) {
+    bulletin_board_sigquit_handler(signum);
+    sync_server_sigquit_handler(signum);
+}
+
 
 string getConfigurationFileParameterFromTerminal(int argc, char **argv) {
     string configurationFile;
@@ -201,7 +213,12 @@ int main(int argc, char **argv, char *envp[]) {
         return 1;
     }
 
-    // TODO: Start the board-server and sync-server here
+    signal(SIGHUP, super_sighup_handler); // kill -HUP <Process ID>
+//    signal(SIGINT, sigquit_handler); // kill -INT <Process ID> or Ctrl + C
+    signal(SIGQUIT, super_sigquit_handler); // kill -QUIT <Process ID> or Ctrl + \ [Does not work on CLion for some reason]
 
-    pthread_exit(nullptr);
+    while(true) {
+        sleep(1000);
+    }
+    return 0;
 }

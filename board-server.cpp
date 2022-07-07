@@ -25,7 +25,6 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
 vector<pthread_t> aliveThreads;
 
-extern char* greetingText;
 
 void killCurrentlyAliveThreads() {
     for (pthread_t threadToKill: aliveThreads) {
@@ -37,13 +36,11 @@ void killCurrentlyAliveThreads() {
     cout << "All Threads Terminated!" << endl;
 }
 
-void sighup_handler(int signum) { // TODO: To be implemented
-    cout << "Inside handler function for signal sighup." << endl;
-
+void bulletin_board_sighup_handler(int signum) { // TODO: To be implemented
     killCurrentlyAliveThreads();
 }
 
-void sigquit_handler(int signum) {
+void bulletin_board_sigquit_handler(int signum) {
     cout << "Inside handler function for signal sigquit." << endl;
 
     killCurrentlyAliveThreads();
@@ -56,13 +53,6 @@ void sigquit_handler(int signum) {
     }
     exit(0);
 
-}
-
-void cleanup_handler(void *arg ) {
-    int *socketToClose = (int *) arg;
-
-    close(*socketToClose);
-    cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }
 
 char* bulletin_board_file;
@@ -91,13 +81,6 @@ int obtain_initial_message_number() {
     }
     close(fd);
     return l;
-}
-
-void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend) {
-    char buffer[255];
-    memset(buffer, 0, sizeof buffer);
-    snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
-    send(socketToSend, buffer, sizeof(buffer), 0);
 }
 
 void writeToFile(const string& user, const string& message, int socketToRespond) {
@@ -379,7 +362,7 @@ void handle_bulletin_board_client(int master_socket) {
             sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
 
-        sendMessage(0.0, "", greetingText);
+        sendMessage(0.0, "", const_cast<char *>(bulletinBoardGreetingText.c_str()));
 
         const int ALEN = 256;
         char req[ALEN];
@@ -479,18 +462,11 @@ int board_server(char **argv) {
         aliveThreads.push_back(tt);
     }
 
-    signal(SIGHUP, sighup_handler); // kill -HUP <Process ID>
-//    signal(SIGINT, sigquit_handler); // kill -INT <Process ID> or Ctrl + C
-    signal(SIGQUIT, sigquit_handler); // kill -QUIT <Process ID> or Ctrl + \ [Does not work on CLion for some reason]
-
-    while(true) {
-        sleep(1000);
-    }
-    return 0;
+    pthread_exit(nullptr);
 }
 
-int main(int argc, char **argv, char *envp[]) {
-    board_server(argv);
-}
+//int main(int argc, char **argv, char *envp[]) {
+//    board_server(argv);
+//}
 
 
