@@ -27,13 +27,7 @@ vector<pthread_t> aliveThreads;
 
 extern char* greetingText;
 
-void sighup_handler(int signum) { // TODO: To be implemented
-    cout << "Inside handler function for signal sighup." << endl;
-}
-
-void sigquit_handler(int signum) { // TODO: To be implemented
-    cout << "Inside handler function for signal sigquit." << endl;
-
+void killCurrentlyAliveThreads() {
     for (pthread_t threadToKill: aliveThreads) {
         cout << "Killing Thread " << threadToKill << endl;
         pthread_cancel(threadToKill);
@@ -41,6 +35,18 @@ void sigquit_handler(int signum) { // TODO: To be implemented
     }
 
     cout << "All Threads Terminated!" << endl;
+}
+
+void sighup_handler(int signum) { // TODO: To be implemented
+    cout << "Inside handler function for signal sighup." << endl;
+
+    killCurrentlyAliveThreads();
+}
+
+void sigquit_handler(int signum) {
+    cout << "Inside handler function for signal sigquit." << endl;
+
+    killCurrentlyAliveThreads();
 
     cout << "Closing All Descriptors. This is Goodbye!" << endl;
     rlimit rlim;
