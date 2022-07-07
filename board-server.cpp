@@ -23,6 +23,8 @@ using namespace std;
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
+vector<pthread_t> aliveThreads;
+
 extern char* greetingText;
 
 void sighup_handler(int signum) { // TODO: To be implemented
@@ -31,6 +33,30 @@ void sighup_handler(int signum) { // TODO: To be implemented
 
 void sigquit_handler(int signum) { // TODO: To be implemented
     cout << "Inside handler function for signal sigquit." << endl;
+
+    for (pthread_t threadToKill: aliveThreads) {
+        cout << "Killing Thread " << threadToKill << endl;
+        pthread_cancel(threadToKill);
+        pthread_join(threadToKill, nullptr);
+    }
+
+    cout << "All Threads Terminated!" << endl;
+
+    cout << "Closing All Descriptors. This is Goodbye!" << endl;
+    rlimit rlim;
+    getrlimit(RLIMIT_NOFILE, &rlim);
+    for (int i = 0; i < rlim.rlim_max; ++i) {
+        close (i);
+    }
+    exit(0);
+
+}
+
+void cleanup_handler(void *arg ) {
+    int *socketToClose = (int *) arg;
+
+    close(*socketToClose);
+    cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }
 
 char* bulletin_board_file;
@@ -329,6 +355,7 @@ void handle_bulletin_board_client(int master_socket) {
     unsigned int client_address_len = sizeof(client_address); // ... and its length
 
     while (true) {
+        pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
         int slave_socket = accept(master_socket, (struct sockaddr *) &client_address, &client_address_len);
         if (slave_socket < 0) {
             if (errno == EINTR) {
@@ -338,6 +365,7 @@ void handle_bulletin_board_client(int master_socket) {
             perror("accept");
             return;
         }
+        pthread_cleanup_push(cleanup_handler, &slave_socket);
 
         cout << "########## New Remote Client Accepted ##########" << endl;
 
@@ -354,6 +382,7 @@ void handle_bulletin_board_client(int master_socket) {
         string user = "nobody";
 
         while ((n = readline(slave_socket, req, ALEN - 1)) != recv_nodata) {
+            pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             if (req[n - 1] == '\r') {
                 req[n - 1] = '\0';
             }
@@ -386,6 +415,7 @@ void handle_bulletin_board_client(int master_socket) {
             } else {
                 sendMessage(0.0, "ERROR", "Invalid Command Entered!");
             }
+            pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
         }
 
         if (n == recv_nodata) {
@@ -396,6 +426,7 @@ void handle_bulletin_board_client(int master_socket) {
         sendMessage(4.0, "BYE", "This is Goodbye.");
         shutdown(slave_socket, 1);
         close(slave_socket);
+        pthread_cleanup_pop(slave_socket);
 
         cout << "########## Remote Connection Terminated ##########" << endl;
     }
@@ -432,12 +463,14 @@ int board_server(char **argv) {
     pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_JOINABLE);
 
     message_number = obtain_initial_message_number();
+    cout << "Process ID: " << getpid() << endl;
 
     for (int i = 0; i < tmax; i++) {
         if (pthread_create(&tt, &ta, (void *(*)(void *)) handle_bulletin_board_client, (void *) master_socket) != 0) {
             perror("pthread_create");
             return 1;
         }
+        aliveThreads.push_back(tt);
     }
 
     signal(SIGHUP, sighup_handler); // kill -HUP <Process ID>
