@@ -366,6 +366,8 @@ void handle_bulletin_board_client(int master_socket) {
 
             if (inputCommand.rfind("QUIT", 0) == 0) {
                 break;
+            } else if (tokens.size() != 2) {
+                sendMessage(0.0, "ERROR", "Malformed Command Received from Client!" );
             } else if (inputCommand.rfind("USER", 0) == 0) {
                 // TODO: How to handle multiple USER commands during a single session??
                 if (tokens[1].find('/') != std::string::npos) {
