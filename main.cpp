@@ -36,6 +36,24 @@ string getConfigurationFileParameterFromTerminal(int argc, char **argv) {
     return configurationFile;
 }
 
+void writeToProcessIdFile() {
+    int processIdFileDescriptor = open("./bbserv.pid", O_WRONLY | O_CREAT | O_TRUNC,
+                                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+    if (processIdFileDescriptor < 0) {
+        perror("open bbserv.pid");
+    }
+    int processId = getpid();
+
+    cout << "Process ID: " << processId << endl;
+
+    char buffer[255];
+    memset(buffer, 0, sizeof buffer);
+    snprintf(buffer, 255, "Process ID: %d\n", processId);
+
+    write(processIdFileDescriptor, buffer, strlen(buffer));
+    close(processIdFileDescriptor);
+}
+
 int main(int argc, char **argv, char *envp[]) {
     int tmax = 20, bulletinBoardServerPort = 9000, syncServerPort = 10000;
     bool isDaemon = true, debuggingModeEnabled = false;
@@ -149,6 +167,8 @@ int main(int argc, char **argv, char *envp[]) {
 
     signal(SIGPIPE, SIG_IGN);
     umask(0137);
+
+    writeToProcessIdFile();
 
     int numberOfPeersSpecifiedViaCommandLine = argc - optind;
     for (int i = 0; i < numberOfPeersSpecifiedViaCommandLine; i++) {
