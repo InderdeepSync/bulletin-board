@@ -23,27 +23,17 @@ using namespace std;
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-vector<pthread_t> aliveThreads;
+vector<pthread_t> bulletinBoardServerThreads;
+long int masterSocket;
 
-
-void killCurrentlyAliveThreads() {
-    for (pthread_t threadToKill: aliveThreads) {
-        cout << "Killing Thread " << threadToKill << endl;
-        pthread_cancel(threadToKill);
-        pthread_join(threadToKill, nullptr);
-    }
-
-    cout << "All Threads Terminated!" << endl;
-}
-
-void bulletin_board_sighup_handler(int signum) { // TODO: To be implemented
-    killCurrentlyAliveThreads();
+void bulletin_board_sighup_handler(int signum) {
+    killThreads(bulletinBoardServerThreads);
 }
 
 void bulletin_board_sigquit_handler(int signum) {
     cout << "Inside handler function for signal sigquit." << endl;
 
-    killCurrentlyAliveThreads();
+    killThreads(bulletinBoardServerThreads);
 
     cout << "Closing All Descriptors. This is Goodbye!" << endl;
     rlimit rlim;
@@ -52,7 +42,6 @@ void bulletin_board_sigquit_handler(int signum) {
         close (i);
     }
     exit(0);
-
 }
 
 char* bulletin_board_file;
@@ -433,34 +422,15 @@ int board_server(char **argv) {
         i++;
     }
 
-    long int master_socket = passivesocket(port, 32);
-
-    if (master_socket < 0) {
-        perror("passive_socket");
-        return 1;
-    }
-
-    int reuse;
-    setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+    masterSocket = createMasterSocket(port);
 
     cout << "Bulletin Board Server up and listening on port " << port << endl;
 
-    // Setting up the thread creation:
-    pthread_t tt;
-    pthread_attr_t ta;
-    pthread_attr_init(&ta);
-    pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_JOINABLE);
 
     message_number = obtain_initial_message_number();
     cout << "Process ID: " << getpid() << endl;
 
-    for (int i = 0; i < tmax; i++) {
-        if (pthread_create(&tt, &ta, (void *(*)(void *)) handle_bulletin_board_client, (void *) master_socket) != 0) {
-            perror("pthread_create");
-            return 1;
-        }
-        aliveThreads.push_back(tt);
-    }
+    createThreads(tmax, handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
 
     pthread_exit(nullptr);
 }

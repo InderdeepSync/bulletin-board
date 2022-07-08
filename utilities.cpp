@@ -2,6 +2,8 @@
 
 #include "utilities.h"
 #include "tcp-utils.h"
+#include <functional>
+#include <array>
 
 
 // Borrowed from https://java2blog.com/split-string-space-cpp/
@@ -28,6 +30,89 @@ int createSocket(string &valueRHOST, string &valueRPORT, int &socketId) {
     // we now have a valid, connected socket
     cout << "Successfully connected to remote host " << valueRHOST << ":" << valueRPORT << " via socketId="<< socketId << endl;
     return 0;
+}
+
+int createMasterSocket(int port) {
+    int socketDescriptor = passivesocket(port, 32);
+
+    if (socketDescriptor < 0) {
+        perror("passive_socket");
+        return 1;
+    }
+
+    int reuse;
+    setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+    return socketDescriptor;
+}
+
+void readConfigurationParametersFromFile(const string& configurationFile, int &tmax, int &bulletinBoardServerPort, int &syncServerPort,
+                                         string &bbfile, vector<string> &peers, bool &isDaemon, bool &debuggingModeEnabled) {
+    int file = open(configurationFile.c_str(), O_RDONLY,
+                    S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+    if (file != -1) {
+        // The file exists on disk. No processing would have been necessary if the file was not present.
+        char *lineContent = new char[255];
+        while (readline(file, lineContent, 255) != recv_nodata) {
+            string trimmedContent = trim(const_cast<char *>(lineContent));
+            if (trimmedContent.empty()) {
+                continue;
+            }
+            std::vector<std::string> keyValuePair;
+            tokenize(lineContent, "=", keyValuePair);
+
+            string key = keyValuePair[0], value = keyValuePair[1];
+            if (key == "THMAX") {
+                tmax = std::stoi(value);
+            }
+            if (key == "BBPORT") {
+                bulletinBoardServerPort = std::stoi(value);
+            }
+            if (key == "SYNCPORT") {
+                syncServerPort = std::stoi(value);
+            }
+            if (key == "BBFILE") {
+                bbfile = value;
+            }
+            if (key == "PEERS") {
+                tokenize(value, " ", peers);
+            }
+            if (key == "DAEMON") {
+                isDaemon = is_true(value);
+            }
+            if (key == "DEBUG") {
+                debuggingModeEnabled = is_true(value);
+            }
+        }
+
+        close(file);
+    }
+}
+
+void killThreads(const vector<pthread_t>& threadsToKill) {
+    for (pthread_t threadToKill: threadsToKill) {
+        cout << "Killing Thread " << threadToKill << endl;
+        pthread_cancel(threadToKill);
+        pthread_join(threadToKill, nullptr);
+    }
+
+    cout << "All Threads Terminated!" << endl;
+}
+
+
+int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handlerArgument, vector<pthread_t> &threadsCollection) {
+    pthread_t tt;
+    pthread_attr_t ta;
+    pthread_attr_init(&ta);
+    pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_JOINABLE);
+
+    for (int i = 0; i < numberOfThreads; i++) {
+        if (pthread_create(&tt, &ta, (void*(*)(void*))serverHandler, (void *) handlerArgument) != 0) {
+            perror("pthread_create");
+            return 1;
+        }
+        threadsCollection.push_back(tt);
+    }
 }
 
 void cleanup_handler(void *arg ) {

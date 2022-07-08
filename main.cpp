@@ -78,45 +78,7 @@ int main(int argc, char **argv, char *envp[]) {
         cout << "No configuration file specified via command line. The default " << configurationFile << " shall be used." << endl;
     }
 
-    int file = open(configurationFile.c_str(), O_RDONLY,
-                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-    if (file != -1) {
-        // The file exists on disk. No processing would have been necessary if the file was not present.
-        char *lineContent = new char[255];
-        while (readline(file, lineContent, 255) != recv_nodata) {
-            string trimmedContent = trim(const_cast<char *>(lineContent));
-            if (trimmedContent.empty()) {
-                continue;
-            }
-            std::vector<std::string> keyValuePair;
-            tokenize(lineContent, "=", keyValuePair);
-
-            string key = keyValuePair[0], value = keyValuePair[1];
-            if (key == "THMAX") {
-                tmax = std::stoi(value);
-            }
-            if (key == "BBPORT") {
-                bulletinBoardServerPort = std::stoi(value);
-            }
-            if (key == "SYNCPORT") {
-                syncServerPort = std::stoi(value);
-            }
-            if (key == "BBFILE") {
-                bbfile = value;
-            }
-            if (key == "PEERS") {
-                tokenize(value, " ", peers);
-            }
-            if (key == "DAEMON") {
-                isDaemon = is_true(value);
-            }
-            if (key == "DEBUG") {
-                debuggingModeEnabled = is_true(value);
-            }
-        }
-
-        close(file);
-    }
+    readConfigurationParametersFromFile(configurationFile, tmax, bulletinBoardServerPort, syncServerPort, bbfile, peers, isDaemon, debuggingModeEnabled);
 
     int c;
     while ((c = getopt(argc, argv, "b:T:p:s:fdc:")) != -1) {
