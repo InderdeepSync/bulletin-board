@@ -25,15 +25,18 @@ pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
 vector<pthread_t> bulletinBoardServerThreads;
 long int masterSocket;
+int message_number;
 
-void bulletin_board_sighup_handler(int signum) {
-    killThreads(bulletinBoardServerThreads);
-}
+string bulletin_board_file;
+bool delayOperations;
+vector<string> peersList;
+int tmax, port;
 
 void bulletin_board_sigquit_handler(int signum) {
-    cout << "Inside handler function for signal sigquit." << endl;
+    cout << "Inside handler function for signal SIGQUIT." << endl;
 
     killThreads(bulletinBoardServerThreads);
+    close(masterSocket);
 
     cout << "Closing All Descriptors. This is Goodbye!" << endl;
     rlimit rlim;
@@ -44,11 +47,6 @@ void bulletin_board_sigquit_handler(int signum) {
     exit(0);
 }
 
-char* bulletin_board_file;
-int message_number;
-bool delayOperations;
-vector<string> peersList;
-
 class AccessData {
     public:
         int num_readers_active;
@@ -57,20 +55,6 @@ class AccessData {
 };
 
 AccessData concurrencyManagementData = AccessData{};
-
-int obtain_initial_message_number() {
-    const int ALEN = 256;
-    char req[ALEN];
-
-    int fd = open(bulletin_board_file, O_CREAT | O_RDONLY,
-                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-    int l = 0;
-    while (readline(fd, req, ALEN - 1) != recv_nodata) {
-        l++;
-    }
-    close(fd);
-    return l;
-}
 
 void writeToFile(const string& user, const string& message, int socketToRespond) {
     cout << "Message received from user: " << user << " => " << message << endl;
@@ -97,7 +81,7 @@ void writeToFile(const string& user, const string& message, int socketToRespond)
         sleep(6);
     }
 
-    int fd = open(bulletin_board_file, O_WRONLY | O_APPEND,
+    int fd = open(bulletin_board_file.c_str(), O_WRONLY | O_APPEND,
                   S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
     char message_line[255];
@@ -148,7 +132,7 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
             sleep(3);
         }
 
-        int fd = open(bulletin_board_file, O_RDONLY,
+        int fd = open(bulletin_board_file.c_str(), O_RDONLY,
                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
         // TODO: Handle failure in above gracefully, iff needed
 
@@ -187,7 +171,7 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
 }
 
 int obtainLengthOfLineToBeReplaced(int messageNumberToReplace, int &totalBytesBeforeLineToReplace) {
-    int fileDescriptor = open(bulletin_board_file,  O_RDONLY,
+    int fileDescriptor = open(bulletin_board_file.c_str(),  O_RDONLY,
                               S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
     const int ALEN = 256;
@@ -214,7 +198,7 @@ void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string 
     int lengthOfLineToBeReplaced = obtainLengthOfLineToBeReplaced(messageNumberToReplace, totalBytesBeforeLineToReplace);
     if (lengthOfLineToBeReplaced == strlen(lineToStore)) {
         // Case 1: Old and New line are of same length
-        int fd3 = open(bulletin_board_file,  O_WRONLY,
+        int fd3 = open(bulletin_board_file.c_str(),  O_WRONLY,
                        S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
         lseek(fd3, totalBytesBeforeLineToReplace, SEEK_SET);
@@ -224,9 +208,9 @@ void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string 
     } else {
         int differenceInLength = strlen(lineToStore) - lengthOfLineToBeReplaced;
 
-        int fd1 = open(bulletin_board_file, O_RDONLY,
+        int fd1 = open(bulletin_board_file.c_str(), O_RDONLY,
                        S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-        int fd2 = open(bulletin_board_file, O_WRONLY,
+        int fd2 = open(bulletin_board_file.c_str(), O_WRONLY,
                        S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
         if (differenceInLength < 0) {
@@ -410,11 +394,34 @@ void handle_bulletin_board_client(int master_socket) {
     }
 }
 
+void bulletin_board_sighup_handler(string configurationFile) {
+    cout << "Inside handler function for signal SIGHUP." << endl;
+
+    killThreads(bulletinBoardServerThreads);
+    close(masterSocket);
+
+    vector<string> newPeersList;
+
+    int integerToIgnore; bool booleanToIgnore;
+    readConfigurationParametersFromFile(configurationFile, tmax, port, integerToIgnore, bulletin_board_file, newPeersList, booleanToIgnore, delayOperations);
+    if (!newPeersList.empty()) {
+        peersList = newPeersList;
+    }
+
+    masterSocket = createMasterSocket(port);
+
+    cout << "Bulletin Board Server Reconfigured and listening on port " << port << endl;
+
+    message_number = obtain_initial_message_number(bulletin_board_file);
+
+    createThreads(tmax, handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
+}
+
 int board_server(char **argv) {
-    const int port = atoi(argv[1]);
+    port = atoi(argv[1]);
     delayOperations = strcmp(argv[2], "true") == 0;
     bulletin_board_file = argv[3];
-    int tmax = atoi(argv[4]);
+    tmax = atoi(argv[4]);
 
     int i = 5;
     while (argv[i] != nullptr) {
@@ -426,8 +433,7 @@ int board_server(char **argv) {
 
     cout << "Bulletin Board Server up and listening on port " << port << endl;
 
-
-    message_number = obtain_initial_message_number();
+    message_number = obtain_initial_message_number(bulletin_board_file);
     cout << "Process ID: " << getpid() << endl;
 
     createThreads(tmax, handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);

@@ -23,8 +23,9 @@
 
 using namespace std;
 
+string configurationFile;
 void super_sighup_handler(int signum) {
-    bulletin_board_sighup_handler(signum);
+    bulletin_board_sighup_handler(configurationFile);
     sync_server_sighup_handler(signum);
 }
 
@@ -33,19 +34,18 @@ void super_sigquit_handler(int signum) {
     sync_server_sigquit_handler(signum);
 }
 
-
 string getConfigurationFileParameterFromTerminal(int argc, char **argv) {
-    string configurationFile;
+    string file;
 
     int c;
     while ((c = getopt(argc, argv, "b:T:p:s:fdc:")) != -1) {
         if ((char)c == 'c') {
-            configurationFile = string(optarg);
-            cout << "configuration file specified via command line as => " << configurationFile << endl;
+            file = string(optarg);
+            cout << "configuration file specified via command line as => " << file << endl;
         }
     }
     optind = 0; // To reset getopt
-    return configurationFile;
+    return file;
 }
 
 void writeToProcessIdFile() {
@@ -72,7 +72,7 @@ int main(int argc, char **argv, char *envp[]) {
     vector<string> peers; // possibly empty => implies a Non-Replicated, single node Server
     string bbfile;
 
-    string configurationFile = getConfigurationFileParameterFromTerminal(argc, argv);
+    configurationFile = getConfigurationFileParameterFromTerminal(argc, argv);
     if (configurationFile.empty()) {
         configurationFile = "./bbserv.conf";
         cout << "No configuration file specified via command line. The default " << configurationFile << " shall be used." << endl;

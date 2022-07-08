@@ -89,12 +89,14 @@ void readConfigurationParametersFromFile(const string& configurationFile, int &t
     }
 }
 
-void killThreads(const vector<pthread_t>& threadsToKill) {
+void killThreads(vector<pthread_t> &threadsToKill) {
     for (pthread_t threadToKill: threadsToKill) {
         cout << "Killing Thread " << threadToKill << endl;
         pthread_cancel(threadToKill);
         pthread_join(threadToKill, nullptr);
     }
+
+    threadsToKill.clear();
 
     cout << "All Threads Terminated!" << endl;
 }
@@ -120,6 +122,20 @@ void cleanup_handler(void *arg ) {
 
     close(*socketToClose);
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
+}
+
+int obtain_initial_message_number(string file) {
+    const int ALEN = 256;
+    char req[ALEN];
+
+    int fd = open(file.c_str(), O_CREAT | O_RDONLY,
+                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+    int l = 0;
+    while (readline(fd, req, ALEN - 1) != recv_nodata) {
+        l++;
+    }
+    close(fd);
+    return l;
 }
 
 void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend) {
