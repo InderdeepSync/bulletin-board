@@ -386,7 +386,7 @@ void handle_bulletin_board_client(int master_socket) {
         }
 
         sendMessage(4.0, "BYE", "This is Goodbye.");
-        shutdown(slave_socket, 1);
+        shutdown(slave_socket, SHUT_RDWR);
         close(slave_socket);
         pthread_cleanup_pop(0);
 

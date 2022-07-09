@@ -115,6 +115,7 @@ int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handler
         }
         threadsCollection.push_back(tt);
     }
+    return 0;
 }
 
 void cleanup_handler(void *arg ) {

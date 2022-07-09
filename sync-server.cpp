@@ -88,7 +88,7 @@ void handle_sync_server_client(int master_socket) {
             cout << "Connection closed by client." << endl;
         }
 
-        shutdown(slave_socket, 1);
+        shutdown(slave_socket, SHUT_RDWR);
         close(slave_socket);
         pthread_cleanup_pop(0);
 
