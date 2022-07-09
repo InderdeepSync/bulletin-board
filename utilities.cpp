@@ -97,8 +97,6 @@ void killThreads(vector<pthread_t> &threadsToKill) {
     }
 
     threadsToKill.clear();
-
-    cout << "All Threads Terminated!" << endl;
 }
 
 

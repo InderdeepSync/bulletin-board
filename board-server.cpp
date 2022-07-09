@@ -32,21 +32,6 @@ bool delayOperations;
 vector<string> peersList;
 int tmax, port;
 
-void bulletin_board_sigquit_handler(int signum) {
-    cout << "Inside handler function for signal SIGQUIT." << endl;
-
-    killThreads(bulletinBoardServerThreads);
-    close(masterSocket);
-
-    cout << "Closing All Descriptors. This is Goodbye!" << endl;
-    rlimit rlim;
-    getrlimit(RLIMIT_NOFILE, &rlim);
-    for (int i = 0; i < rlim.rlim_max; ++i) {
-        close (i);
-    }
-    exit(0);
-}
-
 class AccessData {
     public:
         int num_readers_active;
@@ -394,11 +379,21 @@ void handle_bulletin_board_client(int master_socket) {
     }
 }
 
-void bulletin_board_sighup_handler(string configurationFile) {
-    cout << "Inside handler function for signal SIGHUP." << endl;
+void startBulletinBoardServer() {
+    masterSocket = createMasterSocket(port);
+    cout << "Bulletin Board Server up and listening on port " << port << endl;
 
+    createThreads(tmax, &handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
+}
+
+void bulletin_board_sigquit_handler(int signum) {
     killThreads(bulletinBoardServerThreads);
     close(masterSocket);
+    cout << "All BulletinBoard Server Threads terminated." << endl;
+}
+
+void bulletin_board_sighup_handler(string configurationFile) {
+    bulletin_board_sigquit_handler(1);
 
     vector<string> newPeersList;
 
@@ -408,13 +403,10 @@ void bulletin_board_sighup_handler(string configurationFile) {
         peersList = newPeersList;
     }
 
-    masterSocket = createMasterSocket(port);
-
-    cout << "Bulletin Board Server Reconfigured and listening on port " << port << endl;
-
     message_number = obtain_initial_message_number(bulletin_board_file);
 
-    createThreads(tmax, &handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
+    startBulletinBoardServer();
+    cout << "Reconfiguration Successful. Normal Operation Resumed Successfully! << endl";
 }
 
 int board_server(char **argv) {
@@ -429,14 +421,11 @@ int board_server(char **argv) {
         i++;
     }
 
-    masterSocket = createMasterSocket(port);
-
-    cout << "Bulletin Board Server up and listening on port " << port << endl;
-
-    message_number = obtain_initial_message_number(bulletin_board_file);
     cout << "Process ID: " << getpid() << endl;
 
-    createThreads(tmax, &handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
+    message_number = obtain_initial_message_number(bulletin_board_file);
+
+    startBulletinBoardServer();
 
     pthread_exit(nullptr);
 }

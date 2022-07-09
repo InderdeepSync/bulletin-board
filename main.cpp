@@ -32,6 +32,14 @@ void super_sighup_handler(int signum) {
 void super_sigquit_handler(int signum) {
     bulletin_board_sigquit_handler(signum);
     sync_server_sigquit_handler(signum);
+
+    cout << "Closing All Descriptors. This is Goodbye!" << endl;
+    rlimit rlim;
+    getrlimit(RLIMIT_NOFILE, &rlim);
+    for (int i = 0; i < rlim.rlim_max; ++i) {
+        close (i);
+    }
+    exit(0);
 }
 
 string getConfigurationFileParameterFromTerminal(int argc, char **argv) {
