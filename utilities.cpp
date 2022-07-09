@@ -109,7 +109,7 @@ int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handler
     pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_JOINABLE);
 
     for (int i = 0; i < numberOfThreads; i++) {
-        if (pthread_create(&tt, &ta, (void*(*)(void*))serverHandler, (void *) handlerArgument) != 0) {
+        if (pthread_create(&tt, &ta, (void*(*)(void*))serverHandler, handlerArgument) != 0) {
             perror("pthread_create");
             return 1;
         }

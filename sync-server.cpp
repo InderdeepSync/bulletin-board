@@ -134,6 +134,6 @@ int sync_server(char **argv) {
     pthread_exit(nullptr);
 }
 
-int main(int argc, char **argv, char *envp[]) {
-    sync_server(argv);
-}
+//int main(int argc, char **argv, char *envp[]) {
+//    sync_server(argv);
+//}

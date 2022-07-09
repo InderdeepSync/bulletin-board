@@ -388,7 +388,7 @@ void handle_bulletin_board_client(int master_socket) {
         sendMessage(4.0, "BYE", "This is Goodbye.");
         shutdown(slave_socket, 1);
         close(slave_socket);
-        pthread_cleanup_pop(slave_socket);
+        pthread_cleanup_pop(0);
 
         cout << "########## Remote Connection Terminated ##########" << endl;
     }
@@ -414,7 +414,7 @@ void bulletin_board_sighup_handler(string configurationFile) {
 
     message_number = obtain_initial_message_number(bulletin_board_file);
 
-    createThreads(tmax, handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
+    createThreads(tmax, &handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
 }
 
 int board_server(char **argv) {
@@ -436,7 +436,7 @@ int board_server(char **argv) {
     message_number = obtain_initial_message_number(bulletin_board_file);
     cout << "Process ID: " << getpid() << endl;
 
-    createThreads(tmax, handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
+    createThreads(tmax, &handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
 
     pthread_exit(nullptr);
 }

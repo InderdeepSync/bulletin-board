@@ -9,3 +9,7 @@ cmake-build-debug
 *.sym
 
 .idea
+
+bbserv
+bbserv.pid
+bbfile

@@ -18,4 +18,4 @@ utilities.o:
 	g++ -lpthread -c -o utilities.o utilities.cpp
 
 clean:
-	rm bbserv board-server.o super-server.o sync-server.o tcp-utils.o utilities.o bbserv.log
+	rm -f bbserv board-server.o super-server.o sync-server.o tcp-utils.o utilities.o bbserv.log
