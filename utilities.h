@@ -39,4 +39,6 @@ static const string CONFIGURATION_FILE_BBFILE_KEY = "BBFILE";
 
 static const string CONFIGURATION_FILE_DEBUG_KEY = "DEBUG";
 
+static const string CONFIGURATION_FILE_SYNCPORT_KEY = "SYNCPORT";
+
 #endif

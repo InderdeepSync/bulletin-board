@@ -20,25 +20,15 @@
 
 using namespace std;
 
-//char *bulletin_board_file = "demo.txt";
-//bool delayOperations;
+vector<pthread_t> syncServerThreads;
+long int syncronizationMasterSocket;
 
-//extern int testVariable;
-extern int message_number;
-
-//vector<pthread_t> aliveThreads;
-
-void sync_server_sigquit_handler(int signum) {
-
-}
-
-void sync_server_sighup_handler(int signum) {
-
-}
+const int NUMBER_OF_SYNCRONIZATION_THREADS = 3;
+int syncServerPort;
 
 void handle_sync_server_client(int master_socket) {
     pthread_t currentThread = pthread_self();
-    cout << "New Thread " << currentThread <<  " launched." << endl;
+    cout << "New Syncronization Thread " << currentThread <<  " launched." << endl;
 
     sockaddr_in client_address{}; // the address of the client...
     unsigned int client_address_len = sizeof(client_address); // ... and its length
@@ -71,7 +61,7 @@ void handle_sync_server_client(int master_socket) {
             string inputCommand = req;
             cout << "Command Received from Client: " << inputCommand << endl;
 
-            std::vector<std::string> tokens;
+            vector<string> tokens;
             tokenize(inputCommand, " ", tokens);
 
             if (inputCommand.rfind("QUIT", 0) == 0) {
@@ -96,41 +86,29 @@ void handle_sync_server_client(int master_socket) {
     }
 }
 
+void startSyncServer() {
+    syncronizationMasterSocket = createMasterSocket(syncServerPort);
+    cout << "Syncronization Server up and listening on port " << syncServerPort << endl;
+
+    createThreads(NUMBER_OF_SYNCRONIZATION_THREADS, handle_sync_server_client, (void*)syncronizationMasterSocket, syncServerThreads);
+}
+
+void terminateSyncronizationThreadsAndCloseMasterSocket() {
+    killThreads(syncServerThreads);
+    close(syncronizationMasterSocket);
+    cout << "All Syncronization Server Threads terminated." << endl;
+}
+
+void reconfigureGlobalVariablesAndRestartSyncServer(string configurationFile) {
+    syncServerPort = stoi(readKeyFromConfigurationFile(CONFIGURATION_FILE_SYNCPORT_KEY, configurationFile, to_string(syncServerPort)));
+
+    startSyncServer();
+}
+
 int sync_server(char **argv) {
-    const int port = 10000;
-//    delayOperations = strcmp(argv[2], "true") == 0;
-//    bulletin_board_file = argv[3];
-    int tmax = 3;
+    syncServerPort = atoi(argv[1]);
 
-    long int master_socket = passivesocket(port, 32);
-
-    if (master_socket < 0) {
-        perror("passive_socket");
-        return 1;
-    }
-
-    int reuse;
-    setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-
-    cout << "Syncronization Server up and listening on port " << port << endl;
-
-    // Setting up the thread creation:
-    pthread_t tt;
-    pthread_attr_t ta;
-    pthread_attr_init(&ta);
-    pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_JOINABLE);
-
-//    message_number = obtain_initial_message_number();
-    cout << "Process ID: " << getpid() << endl;
-
-    for (int i = 0; i < tmax; i++) {
-        if (pthread_create(&tt, &ta, (void *(*)(void *)) handle_sync_server_client, (void *) master_socket) != 0) {
-            perror("pthread_create");
-            return 1;
-        }
-//        aliveThreads.push_back(tt);
-    }
-
+    startSyncServer();
     pthread_exit(nullptr);
 }
 

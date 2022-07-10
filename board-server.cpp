@@ -23,16 +23,14 @@
 using namespace std;
 
 vector<pthread_t> bulletinBoardServerThreads;
-long int masterSocket;
+long int bulletinBoardMasterSocket;
 
-string bulletin_board_file;
-bool delayOperations;
 vector<string> peersList;
 int tmax, bulletinBoardServerPort;
 
 void handle_bulletin_board_client(int master_socket) {
     pthread_t currentThread = pthread_self();
-    cout << "New Thread " << currentThread <<  " launched." << endl;
+    cout << "New Bulletin Board Thread " << currentThread <<  " launched." << endl;
 
     sockaddr_in client_address{}; // the address of the client...
     unsigned int client_address_len = sizeof(client_address); // ... and its length
@@ -90,11 +88,11 @@ void handle_bulletin_board_client(int master_socket) {
                     sendMessage(1.0, "HELLO", const_cast<char *>(user.c_str()));
                 }
             } else if (inputCommand.rfind("WRITE", 0) == 0) {
-                writeToFile(bulletin_board_file, user, tokens[1], slave_socket);
+                writeToFile(user, tokens[1], slave_socket);
             } else if (inputCommand.rfind("READ", 0) == 0) {
-                readMessageFromFile(bulletin_board_file, stoi(tokens[1].c_str()), slave_socket);
+                readMessageFromFile(stoi(tokens[1].c_str()), slave_socket);
             } else if (inputCommand.rfind("REPLACE", 0) == 0) {
-                replaceMessageInFile(bulletin_board_file, user, tokens[1], slave_socket);
+                replaceMessageInFile(user, tokens[1], slave_socket);
             } else {
                 sendMessage(0.0, "ERROR", "Invalid Command Entered!");
             }
@@ -116,41 +114,33 @@ void handle_bulletin_board_client(int master_socket) {
 }
 
 void startBulletinBoardServer() {
-    masterSocket = createMasterSocket(bulletinBoardServerPort);
+    bulletinBoardMasterSocket = createMasterSocket(bulletinBoardServerPort);
     cout << "Bulletin Board Server up and listening on port " << bulletinBoardServerPort << endl;
 
-    createThreads(tmax, &handle_bulletin_board_client, (void*)masterSocket, bulletinBoardServerThreads);
+    createThreads(tmax, &handle_bulletin_board_client, (void*)bulletinBoardMasterSocket, bulletinBoardServerThreads);
 }
 
-void bulletin_board_sigquit_handler(int signum) {
+void terminateBulletinBoardThreadsAndCloseMasterSocket() {
     killThreads(bulletinBoardServerThreads);
-    close(masterSocket);
+    close(bulletinBoardMasterSocket);
     cout << "All BulletinBoard Server Threads terminated." << endl;
 }
 
-void bulletin_board_sighup_handler(string configurationFile) {
-    bulletin_board_sigquit_handler(1);
-
+void reconfigureGlobalVariablesAndRestartBoardServer(string configurationFile) {
     vector<string> newPeersList;
 
-    int integerToIgnore; bool booleanToIgnore;
-    readConfigurationParametersFromFile(configurationFile, tmax, bulletinBoardServerPort, integerToIgnore, bulletin_board_file, newPeersList, booleanToIgnore, delayOperations);
+    int integerToIgnore; bool booleanToIgnore; string stringToIgnore;
+    readConfigurationParametersFromFile(configurationFile, tmax, bulletinBoardServerPort, integerToIgnore, stringToIgnore, newPeersList, booleanToIgnore, booleanToIgnore);
     if (!newPeersList.empty()) {
         peersList = newPeersList;
     }
 
-    set_initial_message_number(bulletin_board_file);
-    setDebuggingPreference(delayOperations);
-
     startBulletinBoardServer();
-    cout << "Reconfiguration Successful. Normal Operation Resumed Successfully! << endl";
 }
 
 int board_server(char **argv) {
     bulletinBoardServerPort = atoi(argv[1]);
-    delayOperations = strcmp(argv[2], "true") == 0;
-    bulletin_board_file = argv[3];
-    tmax = atoi(argv[4]);
+    tmax = atoi(argv[2]);
 
     int i = 5;
     while (argv[i] != nullptr) {
@@ -158,13 +148,7 @@ int board_server(char **argv) {
         i++;
     }
 
-    cout << "Process ID: " << getpid() << endl;
-
-    set_initial_message_number(bulletin_board_file);
-    setDebuggingPreference(delayOperations);
-
     startBulletinBoardServer();
-
     pthread_exit(nullptr);
 }
 

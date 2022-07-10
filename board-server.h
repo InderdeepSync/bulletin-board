@@ -4,8 +4,8 @@
 
 int board_server(char **argv);
 
-void bulletin_board_sighup_handler(std::string configurationFile);
+void reconfigureGlobalVariablesAndRestartBoardServer(std::string configurationFile);
 
-void bulletin_board_sigquit_handler(int signum);
+void terminateBulletinBoardThreadsAndCloseMasterSocket();
 
 #endif //BULLETIN_BOARD_BOARD_SERVER_H

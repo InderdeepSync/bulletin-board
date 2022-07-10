@@ -2,8 +2,10 @@
 #ifndef BULLETIN_BOARD_SYNC_SERVER_H
 #define BULLETIN_BOARD_SYNC_SERVER_H
 
-void sync_server_sigquit_handler(int signum);
+int sync_server(char **argv);
 
-void sync_server_sighup_handler(int signum);
+void terminateSyncronizationThreadsAndCloseMasterSocket();
+
+void reconfigureGlobalVariablesAndRestartSyncServer(string configurationFile);
 
 #endif //BULLETIN_BOARD_SYNC_SERVER_H

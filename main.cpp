@@ -20,18 +20,31 @@
 #include "utilities.h"
 #include "board-server.h"
 #include "sync-server.h"
+#include "file-operations.h"
+#include "logger.h"
 
 using namespace std;
 
 string configurationFile;
 void super_sighup_handler(int signum) {
-    bulletin_board_sighup_handler(configurationFile);
-    sync_server_sighup_handler(signum);
+    terminateBulletinBoardThreadsAndCloseMasterSocket();
+    terminateSyncronizationThreadsAndCloseMasterSocket();
+
+    bool debuggingEnabledNew = is_true(readKeyFromConfigurationFile(CONFIGURATION_FILE_DEBUG_KEY, configurationFile, to_string(getDebuggingPreference())));
+    setDebuggingPreference(debuggingEnabledNew);
+
+    string bbfileNew = readKeyFromConfigurationFile(CONFIGURATION_FILE_BBFILE_KEY, configurationFile, getBulletinBoardFile());
+    setBulletinBoardFile(bbfileNew);
+
+    reconfigureGlobalVariablesAndRestartBoardServer(configurationFile);
+    reconfigureGlobalVariablesAndRestartSyncServer(configurationFile);
+
+    cout << "Reconfiguration Successful. Normal Operation Resumed!" << endl;
 }
 
 void super_sigquit_handler(int signum) {
-    bulletin_board_sigquit_handler(signum);
-    sync_server_sigquit_handler(signum);
+    terminateBulletinBoardThreadsAndCloseMasterSocket();
+    terminateSyncronizationThreadsAndCloseMasterSocket();
 
     cout << "Closing All Descriptors. This is Goodbye!" << endl;
     rlimit rlim;
@@ -68,7 +81,7 @@ void writeToProcessIdFile() {
 
     char buffer[255];
     memset(buffer, 0, sizeof buffer);
-    snprintf(buffer, 255, "Process ID: %d\n", processId);
+    snprintf(buffer, 255, "%d\n", processId);
 
     write(processIdFileDescriptor, buffer, strlen(buffer));
     close(processIdFileDescriptor);
@@ -152,26 +165,24 @@ int main(int argc, char **argv, char *envp[]) {
 
     writeToProcessIdFile();
 
+    setBulletinBoardFile(bbfile);
+    setDebuggingPreference(debuggingModeEnabled);
+
     int numberOfPeersSpecifiedViaCommandLine = argc - optind;
     for (int i = 0; i < numberOfPeersSpecifiedViaCommandLine; i++) {
         peers.emplace_back(string(argv[i + optind]));
     }
 
-    string delayReadWriteString = debuggingModeEnabled ? "true" : "false";
-    char* delayOperations = const_cast<char *>(delayReadWriteString.c_str());
-
     int totalPeers = peers.size();
-    char* board_server_arguments[totalPeers + 6];
+    char* board_server_arguments[totalPeers + 4];
     board_server_arguments[0] = "executableName";
     board_server_arguments[1] = strdup(std::to_string(bulletinBoardServerPort).c_str());
-    board_server_arguments[2] = delayOperations;
-    board_server_arguments[3] = const_cast<char *>(bbfile.c_str());
-    board_server_arguments[4] = strdup(std::to_string(tmax).c_str());
+    board_server_arguments[2] = strdup(std::to_string(tmax).c_str());
 
     for (int i = 0; i < totalPeers; i++) {
-        board_server_arguments[i + 5] = const_cast<char *>(peers[i].c_str());
+        board_server_arguments[i + 3] = const_cast<char *>(peers[i].c_str());
     }
-    board_server_arguments[totalPeers + 5] = nullptr;
+    board_server_arguments[totalPeers + 3] = nullptr;
 
     pthread_t tt;
     pthread_attr_t ta;
@@ -183,8 +194,14 @@ int main(int argc, char **argv, char *envp[]) {
         return 1;
     }
 
+    char* sync_server_arguments[] = {"executableName", strdup(std::to_string(syncServerPort).c_str()), nullptr};
+    if (pthread_create(&tt, &ta, (void* (*) (void*)) sync_server, (void*)sync_server_arguments) != 0) {
+        perror("pthread_create");
+        return 1;
+    }
+
     signal(SIGHUP, super_sighup_handler); // kill -HUP <Process ID>
-//    signal(SIGINT, sigquit_handler); // kill -INT <Process ID> or Ctrl + C
+    signal(SIGINT, super_sigquit_handler); // kill -INT <Process ID> or Ctrl + C
     signal(SIGQUIT, super_sigquit_handler); // kill -QUIT <Process ID> or Ctrl + \ [Does not work on CLion for some reason]
 
     while(true) {
