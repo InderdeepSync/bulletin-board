@@ -17,6 +17,8 @@
 #include "tcp-utils.h"
 #include "utilities.h"
 #include "sync-server.h"
+#include "file-operations.h"
+#include "logger.h"
 
 using namespace std;
 
@@ -54,6 +56,7 @@ void handle_sync_server_client(int master_socket) {
         int n;
 
         while ((n = readline(slave_socket, req, ALEN - 1)) != recv_nodata) {
+            pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             if (req[n - 1] == '\r') {
                 req[n - 1] = '\0';
             }
@@ -71,6 +74,7 @@ void handle_sync_server_client(int master_socket) {
             send(slave_socket,ack,strlen(ack),0);
             send(slave_socket,req,strlen(req),0);
             send(slave_socket,"\n",1,0);
+            pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
         }
 
         if (n == recv_nodata) {
@@ -113,5 +117,7 @@ int sync_server(char **argv) {
 }
 
 //int main(int argc, char **argv, char *envp[]) {
+//    setBulletinBoardFile("bbfile");
+//    setDebuggingPreference(true);
 //    sync_server(argv);
 //}

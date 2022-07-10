@@ -1,11 +1,10 @@
 #include <bits/stdc++.h>
+#include <functional>
+#include <array>
 
 #include "utilities.h"
 #include "tcp-utils.h"
 #include "file-operations.h"
-#include <functional>
-#include <array>
-
 
 // Borrowed from https://java2blog.com/split-string-space-cpp/
 void tokenize(std::string const &str, const char *delim,
@@ -124,7 +123,6 @@ void killThreads(vector<pthread_t> &threadsToKill) {
     threadsToKill.clear();
 }
 
-
 int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handlerArgument, vector<pthread_t> &threadsCollection) {
     pthread_t tt;
     pthread_attr_t ta;
@@ -144,7 +142,7 @@ int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handler
 void cleanup_handler(void *arg ) {
     int *socketToClose = (int *) arg;
 
-    shutdown(*socketToClose, SHUT_RDWR);
+    shutdown(*socketToClose, SHUT_RDWR); // TODO: Revisit the purpose and necessity of this.
     close(*socketToClose);
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }

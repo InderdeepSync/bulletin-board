@@ -153,6 +153,8 @@ int board_server(char **argv) {
 }
 
 //int main(int argc, char **argv, char *envp[]) {
+//    setBulletinBoardFile("bbfile");
+//    setDebuggingPreference(false);
 //    board_server(argv);
 //}
 
