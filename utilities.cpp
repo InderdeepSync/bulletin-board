@@ -2,6 +2,7 @@
 
 #include "utilities.h"
 #include "tcp-utils.h"
+#include "file-operations.h"
 #include <functional>
 #include <array>
 
@@ -121,20 +122,6 @@ void cleanup_handler(void *arg ) {
 
     close(*socketToClose);
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
-}
-
-int obtain_initial_message_number(string file) {
-    const int ALEN = 256;
-    char req[ALEN];
-
-    int fd = open(file.c_str(), O_CREAT | O_RDONLY,
-                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-    int l = 0;
-    while (readline(fd, req, ALEN - 1) != recv_nodata) {
-        l++;
-    }
-    close(fd);
-    return l;
 }
 
 void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend) {

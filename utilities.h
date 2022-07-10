@@ -29,8 +29,6 @@ int createMasterSocket(int port);
 
 void readConfigurationParametersFromFile(const string& configurationFile, int &tmax, int &bulletinBoardServerPort, int &syncServerPort, string &bbfile, vector<string> &peers, bool &isDaemon, bool &debuggingModeEnabled);
 
-int obtain_initial_message_number(string file);
-
 void killThreads(vector<pthread_t> &threadsToKill);
 
 int createThreads(int numberOfThreads, void (*serverHandler)(int), void* handlerArgument, vector<pthread_t> &threadsCollection);
