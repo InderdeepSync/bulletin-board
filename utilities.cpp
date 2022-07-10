@@ -41,9 +41,6 @@ int createMasterSocket(int port) {
         return 1;
     }
 
-    int reuse;
-    setsockopt(socketDescriptor, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-
     return socketDescriptor;
 }
 
@@ -147,6 +144,7 @@ int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handler
 void cleanup_handler(void *arg ) {
     int *socketToClose = (int *) arg;
 
+    shutdown(*socketToClose, SHUT_RDWR);
     close(*socketToClose);
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }

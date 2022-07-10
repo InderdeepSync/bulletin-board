@@ -80,6 +80,9 @@ int passivesockaux(const unsigned short port, const int backlog, const unsigned 
     if ( sd < 0 )
         return err_sock;
 
+    int reuse = 1;
+    setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
     // bind socket:
     if ( bind(sd, (struct sockaddr *)&sin, sizeof(sin)) < 0 ) {
         close(sd);

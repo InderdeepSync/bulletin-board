@@ -142,7 +142,7 @@ int board_server(char **argv) {
     bulletinBoardServerPort = atoi(argv[1]);
     tmax = atoi(argv[2]);
 
-    int i = 5;
+    int i = 3;
     while (argv[i] != nullptr) {
         peersList.emplace_back(argv[i]);
         i++;

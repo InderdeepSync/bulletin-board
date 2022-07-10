@@ -90,7 +90,7 @@ void startSyncServer() {
     syncronizationMasterSocket = createMasterSocket(syncServerPort);
     cout << "Syncronization Server up and listening on port " << syncServerPort << endl;
 
-    createThreads(NUMBER_OF_SYNCRONIZATION_THREADS, handle_sync_server_client, (void*)syncronizationMasterSocket, syncServerThreads);
+    createThreads(NUMBER_OF_SYNCRONIZATION_THREADS, &handle_sync_server_client, (void*)syncronizationMasterSocket, syncServerThreads);
 }
 
 void terminateSyncronizationThreadsAndCloseMasterSocket() {
