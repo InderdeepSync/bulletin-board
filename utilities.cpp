@@ -90,6 +90,33 @@ void readConfigurationParametersFromFile(const string& configurationFile, int &t
     }
 }
 
+string readKeyFromConfigurationFile(string keyToRead, string configurationFile, string defaultValue) {
+    string result = defaultValue;
+
+    int file = open(configurationFile.c_str(), O_RDONLY,
+                    S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+    if (file != -1) {
+        // The file exists on disk. No processing would have been necessary if the file was not present.
+        char *lineContent = new char[255];
+        while (readline(file, lineContent, 255) != recv_nodata) {
+            string trimmedContent = trim(const_cast<char *>(lineContent));
+            if (trimmedContent.empty()) {
+                continue;
+            }
+            std::vector<std::string> keyValuePair;
+            tokenize(lineContent, "=", keyValuePair);
+
+            if (keyValuePair[0] == keyToRead) {
+                result = keyValuePair[1];
+                break;
+            }
+        }
+
+        close(file);
+    }
+    return result;
+}
+
 void killThreads(vector<pthread_t> &threadsToKill) {
     for (pthread_t threadToKill: threadsToKill) {
         cout << "Killing Thread " << threadToKill << endl;

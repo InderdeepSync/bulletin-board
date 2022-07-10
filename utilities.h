@@ -33,4 +33,10 @@ void killThreads(vector<pthread_t> &threadsToKill);
 
 int createThreads(int numberOfThreads, void (*serverHandler)(int), void* handlerArgument, vector<pthread_t> &threadsCollection);
 
+string readKeyFromConfigurationFile(string keyToRead, string configurationFile, string defaultValue);
+
+static const string CONFIGURATION_FILE_BBFILE_KEY = "BBFILE";
+
+static const string CONFIGURATION_FILE_DEBUG_KEY = "DEBUG";
+
 #endif

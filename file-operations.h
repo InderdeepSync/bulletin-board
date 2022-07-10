@@ -10,18 +10,20 @@ using namespace std;
 #ifndef BULLETIN_BOARD_FILE_OPERATIONS_H
 #define BULLETIN_BOARD_FILE_OPERATIONS_H
 
-void set_initial_message_number(string file);
-
 int get_initial_message_number();
 
-void writeToFile(string file,const std::string& user, const std::string& message, int socketToRespond);
+void setBulletinBoardFile(string file);
 
-void readMessageFromFile(string file, int messageNumberToRead, int socketToRespond);
+string getBulletinBoardFile();
 
-int obtainLengthOfLineToBeReplaced(string file, int messageNumberToReplace, int &totalBytesBeforeLineToReplace);
+void writeToFile(const std::string& user, const std::string& message, int socketToRespond);
 
-void optimalReplaceAlgorithm(string file, std::string newUser, int messageNumberToReplace, std::string new_message);
+void readMessageFromFile(int messageNumberToRead, int socketToRespond);
 
-void replaceMessageInFile(string file, const std::string& user, const std::string& messageNumberAndMessage, int socketToSend);
+int obtainLengthOfLineToBeReplaced(int messageNumberToReplace, int &totalBytesBeforeLineToReplace);
+
+void optimalReplaceAlgorithm(std::string newUser, int messageNumberToReplace, std::string new_message);
+
+void replaceMessageInFile(const std::string& user, const std::string& messageNumberAndMessage, int socketToSend);
 
 #endif //BULLETIN_BOARD_FILE_OPERATIONS_H

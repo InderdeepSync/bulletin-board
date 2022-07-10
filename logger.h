@@ -4,6 +4,8 @@
 
 void setDebuggingPreference(bool isDelayEnabled);
 
+bool getDebuggingPreference();
+
 void logDebugMessage(char* message, int sleepDurationInSeconds);
 
 #endif //BULLETIN_BOARD_LOGGER_H

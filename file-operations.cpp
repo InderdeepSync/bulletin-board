@@ -24,11 +24,6 @@
 
 using namespace std;
 
-pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-
-int message_number;
-
 class AccessData {
 public:
     int num_readers_active;
@@ -36,11 +31,17 @@ public:
     bool writer_active;
 };
 
-void set_initial_message_number(string file) {
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+int message_number;
+string bulletinBoardFile;
+
+void set_initial_message_number() {
     const int ALEN = 256;
     char req[ALEN];
 
-    int fd = open(file.c_str(), O_CREAT | O_RDONLY,
+    int fd = open(bulletinBoardFile.c_str(), O_CREAT | O_RDONLY,
                   S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
     int l = 0;
     while (readline(fd, req, ALEN - 1) != recv_nodata) {
@@ -50,13 +51,22 @@ void set_initial_message_number(string file) {
     message_number = l;
 }
 
+void setBulletinBoardFile(string file) {
+    bulletinBoardFile = file;
+    set_initial_message_number();
+}
+
+string getBulletinBoardFile() {
+    return bulletinBoardFile;
+}
+
 int get_initial_message_number() {
     return message_number;
 }
 
 AccessData concurrencyManagementData = AccessData{};
 
-void writeToFile(string file, const string& user, const string& message, int socketToRespond) {
+void writeToFile(const string& user, const string& message, int socketToRespond) {
     cout << "Message received from user: " << user << " => " << message << endl;
 
     size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
@@ -81,7 +91,7 @@ void writeToFile(string file, const string& user, const string& message, int soc
     snprintf(msg, 255, "Entered Critical Region. WRITE operation by thread - %zu started!", threadId);
     logDebugMessage(msg, 6);
 
-    int fd = open(file.c_str(), O_WRONLY | O_APPEND,
+    int fd = open(bulletinBoardFile.c_str(), O_WRONLY | O_APPEND,
                   S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
     char message_line[255];
@@ -103,7 +113,7 @@ void writeToFile(string file, const string& user, const string& message, int soc
     sendMessageToSocket(3.0, "WROTE", const_cast<char*>(std::to_string(message_number - 1).c_str()), socketToRespond);
 }
 
-void readMessageFromFile(string file, int messageNumberToRead, int socketToRespond) {
+void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
     if (messageNumberToRead >= message_number or messageNumberToRead < 0) {
         char additionalInfo[255];
         memset(additionalInfo, 0, sizeof additionalInfo);
@@ -131,7 +141,7 @@ void readMessageFromFile(string file, int messageNumberToRead, int socketToRespo
         snprintf(msg, 255, "Entered Critical Region. READ operation by thread - %zu started!", threadId);
         logDebugMessage(msg, 3);
 
-        int fd = open(file.c_str(), O_RDONLY,
+        int fd = open(bulletinBoardFile.c_str(), O_RDONLY,
                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
         // TODO: Handle failure in above gracefully, iff needed
 
@@ -169,8 +179,8 @@ void readMessageFromFile(string file, int messageNumberToRead, int socketToRespo
     }
 }
 
-int obtainLengthOfLineToBeReplaced(string file, int messageNumberToReplace, int &totalBytesBeforeLineToReplace) {
-    int fileDescriptor = open(file.c_str(),  O_RDONLY,
+int obtainLengthOfLineToBeReplaced(int messageNumberToReplace, int &totalBytesBeforeLineToReplace) {
+    int fileDescriptor = open(bulletinBoardFile.c_str(),  O_RDONLY,
                               S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
     const int ALEN = 256;
@@ -188,16 +198,16 @@ int obtainLengthOfLineToBeReplaced(string file, int messageNumberToReplace, int 
     assert(false); // Will Never happen anyway.
 }
 
-void optimalReplaceAlgorithm(string file, string newUser, int messageNumberToReplace, string new_message) {
+void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string new_message) {
     char lineToStore[4096];
     memset(lineToStore, 0, sizeof lineToStore);
     snprintf(lineToStore, 4096, "%d/%s/%s\n", messageNumberToReplace, newUser.c_str(), new_message.c_str());
 
     int totalBytesBeforeLineToReplace = 0;
-    int lengthOfLineToBeReplaced = obtainLengthOfLineToBeReplaced(file, messageNumberToReplace, totalBytesBeforeLineToReplace);
+    int lengthOfLineToBeReplaced = obtainLengthOfLineToBeReplaced(messageNumberToReplace, totalBytesBeforeLineToReplace);
     if (lengthOfLineToBeReplaced == strlen(lineToStore)) {
         // Case 1: Old and New line are of same length
-        int fd3 = open(file.c_str(),  O_WRONLY,
+        int fd3 = open(bulletinBoardFile.c_str(),  O_WRONLY,
                        S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
         lseek(fd3, totalBytesBeforeLineToReplace, SEEK_SET);
@@ -207,9 +217,9 @@ void optimalReplaceAlgorithm(string file, string newUser, int messageNumberToRep
     } else {
         int differenceInLength = strlen(lineToStore) - lengthOfLineToBeReplaced;
 
-        int fd1 = open(file.c_str(), O_RDONLY,
+        int fd1 = open(bulletinBoardFile.c_str(), O_RDONLY,
                        S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-        int fd2 = open(file.c_str(), O_WRONLY,
+        int fd2 = open(bulletinBoardFile.c_str(), O_WRONLY,
                        S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
         if (differenceInLength < 0) {
@@ -261,7 +271,7 @@ void optimalReplaceAlgorithm(string file, string newUser, int messageNumberToRep
     }
 }
 
-void replaceMessageInFile(string file, const string& user, const string& messageNumberAndMessage, int socketToSend) {
+void replaceMessageInFile(const string& user, const string& messageNumberAndMessage, int socketToSend) {
     vector<string> replaceArguments;
     tokenize(messageNumberAndMessage, "/", replaceArguments);
 
@@ -293,7 +303,7 @@ void replaceMessageInFile(string file, const string& user, const string& message
         snprintf(msg, 255, "Entered Critical Region. REPLACE operation by thread - %zu started!", threadId);
         logDebugMessage(msg, 6);
 
-        optimalReplaceAlgorithm(file, user, messageNumberToReplace, new_message);
+        optimalReplaceAlgorithm(user, messageNumberToReplace, new_message);
 
         memset(msg, 0, sizeof msg);
         snprintf(msg, 255, "Exiting Critical Region. REPLACE operation by thread - %zu completed!", threadId);
