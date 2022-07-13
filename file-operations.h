@@ -16,7 +16,7 @@ void setBulletinBoardFile(string file);
 
 string getBulletinBoardFile();
 
-void writeToFile(const std::string& user, const std::string& message, int socketToRespond);
+char * writeToFile(const string &user, const string &message);
 
 void readMessageFromFile(int messageNumberToRead, int socketToRespond);
 

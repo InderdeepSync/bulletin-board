@@ -66,7 +66,7 @@ int get_initial_message_number() {
 
 AccessData concurrencyManagementData = AccessData{};
 
-void writeToFile(const string& user, const string& message, int socketToRespond) {
+char* writeToFile(const string &user, const string &message) {
     cout << "Message received from user: " << user << " => " << message << endl;
 
     size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
@@ -110,7 +110,7 @@ void writeToFile(const string& user, const string& message, int socketToRespond)
     pthread_cond_broadcast(&cond);
     pthread_mutex_unlock(&mut);
 
-    sendMessageToSocket(3.0, "WROTE", const_cast<char*>(std::to_string(message_number - 1).c_str()), socketToRespond);
+    return createMessage(3.0, "WROTE", const_cast<char*>(std::to_string(message_number - 1).c_str()));
 }
 
 void readMessageFromFile(int messageNumberToRead, int socketToRespond) {

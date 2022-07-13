@@ -28,6 +28,10 @@ long int syncronizationMasterSocket;
 const int NUMBER_OF_SYNCRONIZATION_THREADS = 3;
 int syncServerPort;
 
+enum SyncServerStatus {
+    IDLE, PRECOMMIT_ACKNOWLEDGED, AWAITING_SUCCESSFUL_BROADCAST
+};
+
 void handle_sync_server_client(int master_socket) {
     pthread_t currentThread = pthread_self();
     cout << "New Syncronization Thread " << currentThread <<  " launched." << endl;
@@ -50,12 +54,18 @@ void handle_sync_server_client(int master_socket) {
 
         cout << "########## Communication Channel with Peer Established ##########" << client_address.sin_addr.s_addr << endl;
 
+        auto sendMessage = [&](float code, char responseText[], char additionalInfo[]) {
+            sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
+        };
+
+        SyncServerStatus currentStatus = IDLE;
+
         const int ALEN = 256;
         char req[ALEN];
         const char* ack = "ACK: ";
         int n;
 
-        while ((n = readline(slave_socket, req, ALEN - 1)) != recv_nodata) {
+        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 5000)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             if (req[n - 1] == '\r') {
                 req[n - 1] = '\0';
@@ -67,13 +77,36 @@ void handle_sync_server_client(int master_socket) {
             vector<string> tokens;
             tokenize(inputCommand, " ", tokens);
 
-            if (inputCommand.rfind("QUIT", 0) == 0) {
+            string user;
+
+            if (inputCommand.rfind("PRECOMMIT", 0) == 0 && currentStatus == IDLE) {
+                user = tokens[1];
+                sendMessage(5.0, "POSITIVE", "Server available for syncronization.");
+
+                currentStatus = PRECOMMIT_ACKNOWLEDGED;
+            } else if (inputCommand.rfind("ABORT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
+
                 break;
+            } else if (inputCommand.rfind("COMMIT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
+                char* responseText;
+                if (tokens[1] == "WRITE") {
+//                    responseText = writeToFile(user, tokens[2]);
+                } else if (tokens[1] == "REPLACE") {
+//                    vector<string> replaceArguments;
+//                    tokenize(tokens[1], "/", replaceArguments);
+//                    responseText = replaceMessageInFile(user, stoi(replaceArguments[0]), replaceArguments[1]);
+                }
+
+//                currentStatus = COMMITTED;
+//                sendMessage(5.0, "SUCCESS", responseText);
+            } else if (inputCommand.rfind("SUCCESSFUL", 0) == 0) {
+
+            } else if (inputCommand.rfind("UNSUCCESSFUL", 0) == 0) {
+
+            } else {
+                // Invalid Command received from Peer.
             }
 
-            send(slave_socket,ack,strlen(ack),0);
-            send(slave_socket,req,strlen(req),0);
-            send(slave_socket,"\n",1,0);
             pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
         }
 
