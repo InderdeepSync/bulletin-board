@@ -88,7 +88,8 @@ void handle_bulletin_board_client(int master_socket) {
                     sendMessage(1.0, "HELLO", const_cast<char *>(user.c_str()));
                 }
             } else if (inputCommand.rfind("WRITE", 0) == 0) {
-                writeToFile(user, tokens[1], slave_socket);
+                char* responseToSend = writeToFile(user, tokens[1]);
+                send(slave_socket, responseToSend, sizeof(responseToSend), 0);
             } else if (inputCommand.rfind("READ", 0) == 0) {
                 readMessageFromFile(stoi(tokens[1].c_str()), slave_socket);
             } else if (inputCommand.rfind("REPLACE", 0) == 0) {

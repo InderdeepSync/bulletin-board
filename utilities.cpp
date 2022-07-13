@@ -32,6 +32,45 @@ int createSocket(string &valueRHOST, string &valueRPORT, int &socketId) {
     return 0;
 }
 
+int handle_network_command(string &valueRHOST, string &valueRPORT, string &inputCommand, int &socketId, string &output) {
+    const int ALEN = 256;
+    char ans[ALEN];
+
+    send(socketId, const_cast<char *>(inputCommand.c_str()), inputCommand.length(), 0);
+    send(socketId,"\n",1,0);
+
+    int n;
+    while ((n = recv_nonblock(socketId,ans,ALEN-1,2800)) != recv_nodata) {
+        if (n == 0) {
+            shutdown(socketId, SHUT_RDWR);
+            close(socketId);
+            socketId = -1;
+            cout << "Connection closed by " + valueRHOST + ":" + valueRPORT << endl;
+            return 1;
+        }
+        if (n < 0) {
+            perror("recv_nonblock");
+            shutdown(socketId, SHUT_WR);
+            close(socketId);
+            socketId = -1;
+            return 1;
+        }
+        ans[n] = '\0';
+        output = string(ans);
+        break;
+    }
+    if (n == recv_nodata) {
+        cout << "Peer Request Timed out." << endl;
+        output = "SYNC FAIL\n";
+    }
+
+    shutdown(socketId, SHUT_RDWR);
+    close(socketId);
+    socketId = -1;
+
+    return 0;
+}
+
 int createMasterSocket(int port) {
     int socketDescriptor = passivesocket(port, 32);
 
@@ -147,6 +186,14 @@ void cleanup_handler(void *arg ) {
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }
 
+char* createMessage(float code, char responseText[], char additionalInfo[]) {
+    char buffer[255];
+    memset(buffer, 0, sizeof buffer);
+    snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
+
+    return buffer;
+}
+
 void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend) {
     char buffer[255];
     memset(buffer, 0, sizeof buffer);
@@ -175,3 +222,10 @@ bool is_true(const string& value) {
     vector<string> truthyValues = {"1", "true"};
     return std::find(truthyValues.begin(), truthyValues.end(), value) != truthyValues.end();
 };
+
+bool is_number(const std::string& s) {
+    std::string::const_iterator it = s.begin();
+    while (it != s.end() && std::isdigit(*it)) ++it;
+    return !s.empty() && it == s.end();
+}
+
