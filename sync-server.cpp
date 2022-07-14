@@ -81,7 +81,7 @@ void handle_sync_server_client(int master_socket) {
 
             if (inputCommand.rfind("PRECOMMIT", 0) == 0 && currentStatus == IDLE) {
                 user = tokens[1];
-                sendMessage(5.0, "READY", "Server available for syncronization.");
+                sendMessage(5.0, "READY", "User stored. Syncronization Server available.");
 
                 currentStatus = PRECOMMIT_ACKNOWLEDGED;
             } else if (inputCommand.rfind("ABORT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
@@ -123,9 +123,7 @@ void handle_sync_server_client(int master_socket) {
         }
         // If timeout occured, check which state am I in. Based on that, take action // RElease lock if held
         if (n == recv_nodata) {
-            if (currentStatus == IDLE) {
-
-            } else if (currentStatus == PRECOMMIT_ACKNOWLEDGED) {
+            if (currentStatus == IDLE or currentStatus == PRECOMMIT_ACKNOWLEDGED) {
 
             } else if (currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
                 undoCommitOperation();

@@ -91,13 +91,12 @@ void handle_bulletin_board_client(int master_socket) {
                 }
             } else if (inputCommand.rfind("WRITE", 0) == 0) {
                 acquireWriteLock("WRITE");
-                writeOperation(user, tokens[1], NO_OPERATION);
-                string response = createMessage(3.0, "WROTE", const_cast<char*>(std::to_string(get_initial_message_number() - 1).c_str()));
+                string response = writeOperation(user, tokens[1], NO_OPERATION);
                 releaseWriteLock("WRITE");
 
                 send(slave_socket, response.c_str(), response.size(), 0);
             } else if (inputCommand.rfind("READ", 0) == 0) {
-                readMessageFromFile(stoi(tokens[1].c_str()), slave_socket);
+                readMessageFromFile(stoi(tokens[1]), slave_socket);
             } else if (inputCommand.rfind("REPLACE", 0) == 0) {
                 string response = replaceMessageInFile(user, tokens[1], false, NO_OPERATION);
                 send(slave_socket, response.c_str(), response.size(), 0);
