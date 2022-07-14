@@ -125,9 +125,9 @@ string writeOperation(const string &user, const string &message, function<void()
     char message_line[255];
     memset(message_line, 0, sizeof message_line);
     snprintf(message_line, 255, "%d/%s/%s\n", message_number, user.c_str(), message.c_str());
-    string response = createMessage(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()));
 
     write(fd, message_line, strlen(message_line));
+    string response = createMessage(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()));
     close(fd);
 
     return response;
