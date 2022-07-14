@@ -186,12 +186,12 @@ void cleanup_handler(void *arg ) {
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }
 
-char* createMessage(float code, char responseText[], char additionalInfo[]) {
+string createMessage(float code, char responseText[], char additionalInfo[]) {
     char buffer[255];
     memset(buffer, 0, sizeof buffer);
     snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
 
-    return buffer;
+    return string(buffer);
 }
 
 void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend) {
