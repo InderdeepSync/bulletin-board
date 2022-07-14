@@ -22,6 +22,8 @@
 
 using namespace std;
 
+function<void()> NO_OPERATION = [](){};
+
 vector<pthread_t> bulletinBoardServerThreads;
 long int bulletinBoardMasterSocket;
 
@@ -88,12 +90,17 @@ void handle_bulletin_board_client(int master_socket) {
                     sendMessage(1.0, "HELLO", const_cast<char *>(user.c_str()));
                 }
             } else if (inputCommand.rfind("WRITE", 0) == 0) {
-                char* responseToSend = writeToFile(user, tokens[1]);
-                send(slave_socket, responseToSend, sizeof(responseToSend), 0);
+                acquireWriteLock("WRITE");
+                writeOperation(user, tokens[1], NO_OPERATION);
+                string response = createMessage(3.0, "WROTE", const_cast<char*>(std::to_string(get_initial_message_number() - 1).c_str()));
+                releaseWriteLock("WRITE");
+
+                send(slave_socket, response.c_str(), response.size(), 0);
             } else if (inputCommand.rfind("READ", 0) == 0) {
                 readMessageFromFile(stoi(tokens[1].c_str()), slave_socket);
             } else if (inputCommand.rfind("REPLACE", 0) == 0) {
-                replaceMessageInFile(user, tokens[1], slave_socket);
+                string response = replaceMessageInFile(user, tokens[1], false, NO_OPERATION);
+                send(slave_socket, response.c_str(), response.size(), 0);
             } else {
                 sendMessage(0.0, "ERROR", "Invalid Command Entered!");
             }
@@ -153,10 +160,10 @@ int board_server(char **argv) {
     pthread_exit(nullptr);
 }
 
-//int main(int argc, char **argv, char *envp[]) {
-//    setBulletinBoardFile("bbfile");
-//    setDebuggingPreference(false);
-//    board_server(argv);
-//}
+int main(int argc, char **argv, char *envp[]) {
+    setBulletinBoardFile("bbfile");
+    setDebuggingPreference(false);
+    board_server(argv);
+}
 
 

@@ -66,14 +66,12 @@ int get_initial_message_number() {
 
 AccessData concurrencyManagementData = AccessData{};
 
-char* writeToFile(const string &user, const string &message) {
-    cout << "Message received from user: " << user << " => " << message << endl;
-
-    size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
+void acquireWriteLock(string currentCommand) {
+    size_t threadId = hash<thread::id>{}(this_thread::get_id());
 
     char msg[256];
     memset(msg, 0, sizeof msg);
-    snprintf(msg, 255, "Waiting to enter Critical Region. WRITE operation by thread - %zu pending!", threadId);
+    snprintf(msg, 255, "Waiting to enter Critical Region. %s operation by thread - %zu pending!", currentCommand.c_str(), threadId);
     logDebugMessage(msg, 0);
 
     pthread_mutex_lock(&mut);
@@ -88,29 +86,51 @@ char* writeToFile(const string &user, const string &message) {
     pthread_mutex_unlock(&mut);
 
     memset(msg, 0, sizeof msg);
-    snprintf(msg, 255, "Entered Critical Region. WRITE operation by thread - %zu started!", threadId);
+    snprintf(msg, 255, "Entered Critical Region. %s operation by thread - %zu started!", currentCommand.c_str(), threadId);
     logDebugMessage(msg, 6);
+}
 
-    int fd = open(bulletinBoardFile.c_str(), O_WRONLY | O_APPEND,
-                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+void releaseWriteLock(string currentCommand) {
+    size_t threadId = hash<thread::id>{}(this_thread::get_id());
 
-    char message_line[255];
-    memset(message_line, 0, sizeof message_line);
-    snprintf(message_line, 255, "%d/%s/%s\n", message_number++, user.c_str(), message.c_str());
-
-    write(fd, message_line, strlen(message_line));
-    close(fd);
-
+    char msg[256];
     memset(msg, 0, sizeof msg);
-    snprintf(msg, 255, "Exiting Critical Region. WRITE operation by thread - %zu completed!", threadId);
+    snprintf(msg, 255, "Exiting Critical Region. %s operation by thread - %zu completed!", currentCommand.c_str(), threadId);
     logDebugMessage(msg, 0);
 
     pthread_mutex_lock(&mut);
     concurrencyManagementData.writer_active = false;
     pthread_cond_broadcast(&cond);
     pthread_mutex_unlock(&mut);
+}
 
-    return createMessage(3.0, "WROTE", const_cast<char*>(std::to_string(message_number - 1).c_str()));
+off_t getBulletinBoardFileSize() {
+    int fp = open(bulletinBoardFile.c_str(), O_RDONLY,
+                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+
+    off_t fileSize = lseek(fp, 0L, SEEK_END);
+    close(fp);
+    return fileSize;
+}
+
+string writeOperation(const string &user, const string &message, function<void()> &undoWrite) {
+    int fd = open(bulletinBoardFile.c_str(), O_WRONLY | O_APPEND,
+                  S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+
+    off_t fileSizeBeforeWrite = getBulletinBoardFileSize();
+    undoWrite = [fileSizeBeforeWrite](){
+        truncate(bulletinBoardFile.c_str(), fileSizeBeforeWrite);
+    };
+
+    char message_line[255];
+    memset(message_line, 0, sizeof message_line);
+    snprintf(message_line, 255, "%d/%s/%s\n", message_number, user.c_str(), message.c_str());
+    string response = createMessage(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()));
+
+    write(fd, message_line, strlen(message_line));
+    close(fd);
+
+    return response;
 }
 
 void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
@@ -271,7 +291,7 @@ void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string 
     }
 }
 
-void replaceMessageInFile(const string& user, const string& messageNumberAndMessage, int socketToSend) {
+string replaceMessageInFile(const string& user, const string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace) {
     vector<string> replaceArguments;
     tokenize(messageNumberAndMessage, "/", replaceArguments);
 
@@ -279,41 +299,41 @@ void replaceMessageInFile(const string& user, const string& messageNumberAndMess
     string new_message = replaceArguments[1];
 
     if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
-        sendMessageToSocket(3.1, "UNKNOWN", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()), socketToSend);
+        return createMessage(3.1, "UNKNOWN", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()));
     } else {
-        size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
+        acquireWriteLock("REPLACE");
 
-        char msg[256];
-        memset(msg, 0, sizeof msg);
-        snprintf(msg, 255, "Waiting to enter Critical Region. REPLACE operation by thread - %zu pending!", threadId);
-        logDebugMessage(msg, 0);
-
-        pthread_mutex_lock(&mut);
-        concurrencyManagementData.num_writers_waiting += 1;
-
-        while (concurrencyManagementData.num_readers_active > 0 or
-               concurrencyManagementData.writer_active) {
-            pthread_cond_wait(&cond, &mut);
-        }
-        concurrencyManagementData.num_writers_waiting -= 1;
-        concurrencyManagementData.writer_active = true;
-        pthread_mutex_unlock(&mut);
-
-        memset(msg, 0, sizeof msg);
-        snprintf(msg, 255, "Entered Critical Region. REPLACE operation by thread - %zu started!", threadId);
-        logDebugMessage(msg, 6);
+        auto messageInfo = getMessageNumberInfo(messageNumberToReplace);
+        string oldUser = messageInfo.first;
+        string oldMessage = messageInfo.second;
+        undoReplace = [oldUser, messageNumberToReplace, oldMessage](){
+            optimalReplaceAlgorithm(oldUser, messageNumberToReplace, oldMessage);
+        };
 
         optimalReplaceAlgorithm(user, messageNumberToReplace, new_message);
-
-        memset(msg, 0, sizeof msg);
-        snprintf(msg, 255, "Exiting Critical Region. REPLACE operation by thread - %zu completed!", threadId);
-        logDebugMessage(msg, 0);
-
-        pthread_mutex_lock(&mut);
-        concurrencyManagementData.writer_active = false;
-        pthread_cond_broadcast(&cond);
-        pthread_mutex_unlock(&mut);
-
-        sendMessageToSocket(3.0, "WROTE", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()), socketToSend);
+        if (!holdLock) {
+            releaseWriteLock("REPLACE");
+        }
+        return createMessage(3.0, "WROTE", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()));
     }
+}
+
+pair<string, string> getMessageNumberInfo(int messageNumber) {
+    int fileDescriptor = open(bulletinBoardFile.c_str(),  O_RDONLY,
+                              S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
+
+    const int ALEN = 256;
+    int l = 0; char textLine[ALEN];
+
+    while (readline(fileDescriptor, textLine, ALEN - 1) != recv_nodata) {
+        if (l == messageNumber) {
+            vector<string> lineTokens;
+            tokenize(string(textLine), "/", lineTokens);
+
+            close(fileDescriptor);
+            return make_pair(lineTokens[1], lineTokens[2]);
+        }
+        l++;
+    }
+    assert(false);
 }

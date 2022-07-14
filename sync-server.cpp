@@ -29,7 +29,7 @@ const int NUMBER_OF_SYNCRONIZATION_THREADS = 3;
 int syncServerPort;
 
 enum SyncServerStatus {
-    IDLE, PRECOMMIT_ACKNOWLEDGED, AWAITING_SUCCESSFUL_BROADCAST
+    IDLE, PRECOMMIT_ACKNOWLEDGED, AWAITING_SUCCESS_OR_UNDO_BROADCAST
 };
 
 void handle_sync_server_client(int master_socket) {
@@ -52,23 +52,25 @@ void handle_sync_server_client(int master_socket) {
         }
         pthread_cleanup_push(cleanup_handler, &slave_socket);
 
-        cout << "########## Communication Channel with Peer Established ##########" << client_address.sin_addr.s_addr << endl;
+        cout << "########## Communication Channel with Peer Established ##########" << endl;
 
         auto sendMessage = [&](float code, char responseText[], char additionalInfo[]) {
             sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
 
         SyncServerStatus currentStatus = IDLE;
+        std::function<void()> undoCommitOperation = [](){};
+        string operationPerformed;
+        string user;
 
         const int ALEN = 256;
         char req[ALEN];
-        const char* ack = "ACK: ";
         int n;
 
-        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 5000)) != recv_nodata) {
+        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 10000)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
-            if (req[n - 1] == '\r') {
-                req[n - 1] = '\0';
+            if (req[n - 2] == '\r') {
+                req[n - 2] = '\0';
             }
 
             string inputCommand = req;
@@ -77,42 +79,58 @@ void handle_sync_server_client(int master_socket) {
             vector<string> tokens;
             tokenize(inputCommand, " ", tokens);
 
-            string user;
-
             if (inputCommand.rfind("PRECOMMIT", 0) == 0 && currentStatus == IDLE) {
                 user = tokens[1];
-                sendMessage(5.0, "POSITIVE", "Server available for syncronization.");
+                sendMessage(5.0, "READY", "Server available for syncronization.");
 
                 currentStatus = PRECOMMIT_ACKNOWLEDGED;
             } else if (inputCommand.rfind("ABORT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
-
                 break;
             } else if (inputCommand.rfind("COMMIT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
-                char* responseText;
                 if (tokens[1] == "WRITE") {
-//                    responseText = writeToFile(user, tokens[2]);
+                    acquireWriteLock("WRITE");
+                    string response = writeOperation(user, tokens[2], undoCommitOperation);
+                    sendMessage(5.0, "COMMIT_SUCCESS", const_cast<char*>(response.c_str()));
+
+                    operationPerformed = "WRITE";
                 } else if (tokens[1] == "REPLACE") {
-//                    vector<string> replaceArguments;
-//                    tokenize(tokens[1], "/", replaceArguments);
-//                    responseText = replaceMessageInFile(user, stoi(replaceArguments[0]), replaceArguments[1]);
+                    string response = replaceMessageInFile(user, tokens[2], true, undoCommitOperation);
+
+                    bool replaceCommandFailed = response.find("UNKNOWN") != string::npos;
+                    string responseText =  replaceCommandFailed ? "COMMIT_UNSUCCESS" : "COMMIT_SUCCESS";
+
+                    sendMessage(5.0, const_cast<char*>(responseText.c_str()), const_cast<char*>(response.c_str()));
+                    if (replaceCommandFailed) {
+                        break;
+                    }
+
+                    operationPerformed = "REPLACE";
                 }
 
-//                currentStatus = COMMITTED;
-//                sendMessage(5.0, "SUCCESS", responseText);
-            } else if (inputCommand.rfind("SUCCESSFUL", 0) == 0) {
-
-            } else if (inputCommand.rfind("UNSUCCESSFUL", 0) == 0) {
-
+                currentStatus = AWAITING_SUCCESS_OR_UNDO_BROADCAST;
+            } else if (inputCommand.rfind("SUCCESS_NOOP", 0) == 0 && currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
+                releaseWriteLock(operationPerformed);
+                break;
+            } else if (inputCommand.rfind("UNSUCCESS_UNDO", 0) == 0 && currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
+                undoCommitOperation();
+                releaseWriteLock(operationPerformed);
+                break;
             } else {
                 // Invalid Command received from Peer.
             }
 
             pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
         }
-
+        // If timeout occured, check which state am I in. Based on that, take action // RElease lock if held
         if (n == recv_nodata) {
-            // read 0 bytes = EOF:
-            cout << "Connection closed by client." << endl;
+            if (currentStatus == IDLE) {
+
+            } else if (currentStatus == PRECOMMIT_ACKNOWLEDGED) {
+
+            } else if (currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
+                undoCommitOperation();
+                releaseWriteLock(operationPerformed);
+            }
         }
 
         shutdown(slave_socket, SHUT_RDWR);
@@ -151,6 +169,6 @@ int sync_server(char **argv) {
 
 //int main(int argc, char **argv, char *envp[]) {
 //    setBulletinBoardFile("bbfile");
-//    setDebuggingPreference(true);
+//    setDebuggingPreference(false);
 //    sync_server(argv);
 //}

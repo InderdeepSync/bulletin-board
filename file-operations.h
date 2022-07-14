@@ -16,7 +16,11 @@ void setBulletinBoardFile(string file);
 
 string getBulletinBoardFile();
 
-char * writeToFile(const string &user, const string &message);
+void acquireWriteLock(string currentCommand);
+
+void releaseWriteLock(string currentCommand);
+
+string writeOperation(const string &user, const string &message, function<void()> &undoWrite);
 
 void readMessageFromFile(int messageNumberToRead, int socketToRespond);
 
@@ -24,6 +28,8 @@ int obtainLengthOfLineToBeReplaced(int messageNumberToReplace, int &totalBytesBe
 
 void optimalReplaceAlgorithm(std::string newUser, int messageNumberToReplace, std::string new_message);
 
-void replaceMessageInFile(const std::string& user, const std::string& messageNumberAndMessage, int socketToSend);
+string replaceMessageInFile(const std::string& user, const std::string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace);
+
+pair<string, string> getMessageNumberInfo(int messageNumber);
 
 #endif //BULLETIN_BOARD_FILE_OPERATIONS_H
