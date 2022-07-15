@@ -215,7 +215,7 @@ int obtainLengthOfLineToBeReplaced(int messageNumberToReplace, int &totalBytesBe
         }
         l++;
     }
-    assert(false); // Will Never happen anyway.
+    assert(false); // Should Never happen.
 }
 
 void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string new_message) {
