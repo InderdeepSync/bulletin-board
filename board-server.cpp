@@ -1,7 +1,5 @@
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/resource.h>
 #include <map>
 #include <pthread.h>
 #include <cstdio>
@@ -12,12 +10,12 @@
 #include <set>
 #include <functional>
 #include <algorithm>
-#include <cassert>
 
 #include "board-server.h"
 #include "tcp-utils.h"
 #include "utilities.h"
 #include "file-operations.h"
+#include "peer-communication.h"
 #include "logger.h"
 
 using namespace std;
@@ -159,10 +157,10 @@ int board_server(char **argv) {
     pthread_exit(nullptr);
 }
 
-int main(int argc, char **argv, char *envp[]) {
-    setBulletinBoardFile("bbfile");
-    setDebuggingPreference(false);
-    board_server(argv);
-}
+//int main(int argc, char **argv, char *envp[]) {
+//    setBulletinBoardFile("bbfile");
+//    setDebuggingPreference(false);
+//    board_server(argv);
+//}
 
 

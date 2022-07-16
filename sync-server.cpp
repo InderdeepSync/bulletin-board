@@ -28,7 +28,7 @@ long int syncronizationMasterSocket;
 const int NUMBER_OF_SYNCRONIZATION_THREADS = 3;
 int syncServerPort;
 
-enum SyncServerStatus {
+enum SyncSlaveServerStatus {
     IDLE, PRECOMMIT_ACKNOWLEDGED, AWAITING_SUCCESS_OR_UNDO_BROADCAST
 };
 
@@ -58,7 +58,7 @@ void handle_sync_server_client(int master_socket) {
             sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
 
-        SyncServerStatus currentStatus = IDLE;
+        SyncSlaveServerStatus currentStatus = IDLE;
         std::function<void()> undoCommitOperation = [](){};
         string operationPerformed;
         string user;
@@ -69,9 +69,17 @@ void handle_sync_server_client(int master_socket) {
 
         while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 10000)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
+            if (n == 0) {
+                cout << "Connection closed by Master Node." << endl;
+                break;
+            }
+            if (n < 0) {
+                perror("recv_nonblock");
+                break;
+            }
 
-            // TODO: rec_nonblock does not get rid of \n, unlike readline. Current Implementation handles telnet but won't work with standard messages terminated with a \n
-            // This would need to be modified accordingly.
+            // NOTE: rec_nonblock does not get rid of \n, unlike readline.
+            req[n - 1] = '\0'; // Replace last character '\n' with the null byte
             if (req[n - 2] == '\r') {
                 req[n - 2] = '\0';
             }
@@ -168,8 +176,8 @@ int sync_server(char **argv) {
     pthread_exit(nullptr);
 }
 
-int main(int argc, char **argv, char *envp[]) {
-    setBulletinBoardFile("bbfile");
-    setDebuggingPreference(false);
-    sync_server(argv);
-}
+//int main(int argc, char **argv, char *envp[]) {
+//    setBulletinBoardFile("bbfile");
+//    setDebuggingPreference(false);
+//    sync_server(argv);
+//}

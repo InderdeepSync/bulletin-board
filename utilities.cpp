@@ -16,61 +16,6 @@ void tokenize(std::string const &str, const char *delim,
     }
 }
 
-int createSocket(string &valueRHOST, string &valueRPORT, int &socketId) {
-    socketId = connectbyport(const_cast<char *>(valueRHOST.c_str()),const_cast<char *>(valueRPORT.c_str()));
-    if (socketId == err_host) {
-        cerr << "Cannot Find Host: " << valueRHOST << endl;
-        return 1;
-    }
-    if (socketId < 0) {
-        cout << "Connection refused by " << valueRHOST << ":" << valueRPORT << endl;
-        socketId = -1;
-        return 1;
-    }
-    // we now have a valid, connected socket
-    cout << "Successfully connected to remote host " << valueRHOST << ":" << valueRPORT << " via socketId="<< socketId << endl;
-    return 0;
-}
-
-int handle_network_command(string &valueRHOST, string &valueRPORT, string &inputCommand, int &socketId, string &output) {
-    const int ALEN = 256;
-    char ans[ALEN];
-
-    send(socketId, const_cast<char *>(inputCommand.c_str()), inputCommand.length(), 0);
-    send(socketId,"\n",1,0);
-
-    int n;
-    while ((n = recv_nonblock(socketId,ans,ALEN-1,2800)) != recv_nodata) {
-        if (n == 0) {
-            shutdown(socketId, SHUT_RDWR);
-            close(socketId);
-            socketId = -1;
-            cout << "Connection closed by " + valueRHOST + ":" + valueRPORT << endl;
-            return 1;
-        }
-        if (n < 0) {
-            perror("recv_nonblock");
-            shutdown(socketId, SHUT_WR);
-            close(socketId);
-            socketId = -1;
-            return 1;
-        }
-        ans[n] = '\0';
-        output = string(ans);
-        break;
-    }
-    if (n == recv_nodata) {
-        cout << "Peer Request Timed out." << endl;
-        output = "SYNC FAIL\n";
-    }
-
-    shutdown(socketId, SHUT_RDWR);
-    close(socketId);
-    socketId = -1;
-
-    return 0;
-}
-
 int createMasterSocket(int port) {
     int socketDescriptor = passivesocket(port, 32);
 

@@ -13,8 +13,6 @@ using namespace std;
 void tokenize(std::string const &str, const char *delim,
               std::vector<std::string> &out);
 
-int createSocket(string &valueRHOST, string &valueRPORT, int &socketId);
-
 void cleanup_handler(void *arg );
 
 void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend);
