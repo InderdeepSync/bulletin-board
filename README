@@ -1,0 +1,86 @@
+Inderdeep Singh
+isingh213@ubishops.ca
+Student ID: 002308494
+
+
+1) '-d' flag delays READ by three seconds, while it delays WRITE and REPLACE operations by 6 seconds. By default, this functionality is disabled.
+2) Daemon mode is enabled by default. '-f' disables daemon mode. the Server process is NOT detached, allowing user to examine the operations of the server closely, and
+standard output logs are displayed on the terminal window. However, if the user opts not to enable this mode, then the logs are redirected to shfd.log as well as other considerations
+such as closing input/output descriptors, changing current working directory[In this case set to "." itself], putting the process in background, handling signals, severing the connection
+from controlling tty, etc is taken care of.
+3) The file manipulation commands are pretty straightforward.
+4) File Access Control is implemented using a mutex, a condition variable and a data structure encapsulating details such as the num_readers_active, num_writers_waiting, writer_active.
+The code itself is simple and is write-preferring in nature. Code is written by referencing the pseudocode given at https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock.
+The following is a direct translation from there for your reference.
+
+
+struct AccessData {
+    int num_readers_active;
+    int num_writers_waiting;
+    bool writer_active;
+};
+
+AccessData shared_statistics{};
+
+pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+void *reader(int param) {
+    pthread_mutex_lock(&mut);
+
+    while(shared_statistics.num_writers_waiting > 0 or shared_statistics.writer_active) {
+        pthread_cond_wait(&cond, &mut);
+    }
+    shared_statistics.num_readers_active += 1;
+    pthread_mutex_unlock(&mut);
+
+    printf("\n%d Reader is inside Critical Region.",param);
+    sleep(3);
+    printf("\n%d Reader is about to leave critical region.",param);
+
+    pthread_mutex_lock(&mut);
+    shared_statistics.num_readers_active -= 1;
+    if (shared_statistics.num_readers_active == 0) {
+        pthread_cond_broadcast(&cond);
+    }
+    pthread_mutex_unlock(&mut);
+
+
+    return nullptr;
+}
+
+void *writer(int param) {
+    pthread_mutex_lock(&mut);
+    shared_statistics.num_writers_waiting += 1;
+
+    while(shared_statistics.num_readers_active > 0 or shared_statistics.writer_active) {
+        pthread_cond_wait(&cond, &mut);
+    }
+    shared_statistics.num_writers_waiting -= 1;
+    shared_statistics.writer_active = true;
+    pthread_mutex_unlock(&mut);
+
+    printf("\n%d Writer is inside Critical Section", param);
+    sleep(3);
+
+    printf("\n%d writer is leaving critical region",param);
+
+
+    pthread_mutex_lock(&mut);
+    shared_statistics.writer_active = false;
+    pthread_cond_broadcast(&cond);
+    pthread_mutex_unlock(&mut);
+
+    return nullptr;
+}
+
+***********************************************************************************************************
+Apart from the above (from the previous assignment), consider the following:
+
+
+2. Both accept() and read() are guaranteed cancellation points, hence pthread_cancel() is sufficient to cancel without much concern. However, in order to deallocate resources, a cleanup_handler is installed
+that closes the socket when an active thread is cancelled[using pthread_cleanup_push and pthread_cleanup_pop]. This handler is not invoked under normal thread lifecycle.
+
+3. Code was refactored so that same functions may be utilized both by client threads and synchronization threads. Code from second assignment was used to communicate with peers.
+
+
