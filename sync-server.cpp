@@ -84,43 +84,41 @@ void handle_sync_server_client(int master_socket) {
                 req[n - 2] = '\0';
             }
 
-            string inputCommand = req;
-            cout << "Command Received from Client: " << inputCommand << endl;
+            cout << "Command Received from Client: " << req << endl;
+            vector<string> tokens = tokenize(string(req), " ");
 
-            vector<string> tokens = tokenize(inputCommand, " ");
-
-            if (inputCommand.rfind("PRECOMMIT", 0) == 0 && currentStatus == IDLE) {
-                user = tokens[1];
-                sendMessage(5.0, "READY", "User stored. Syncronization Server available.");
+            if (tokens[1] == PRECOMMIT and currentStatus == IDLE) {
+                user = tokens[2];
+                sendMessage(5.0, READY, "User stored. Syncronization Server available.");
 
                 currentStatus = PRECOMMIT_ACKNOWLEDGED;
-            } else if (inputCommand.rfind("ABORT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
+            } else if (tokens[1] == ABORT and currentStatus == PRECOMMIT_ACKNOWLEDGED) {
                 break;
-            } else if (inputCommand.rfind("COMMIT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
-                if (tokens[1] == "WRITE") {
-                    string response = writeOperation(user, tokens[2], true, undoCommitOperation);
-                    sendMessage(5.0, "COMMIT_SUCCESS", response.c_str());
+            } else if (tokens[1] == COMMIT and currentStatus == PRECOMMIT_ACKNOWLEDGED) {
+                if (tokens[2] == WRITE) {
+                    string response = writeOperation(user, tokens[3], true, undoCommitOperation);
+                    sendMessage(5.0, COMMIT_SUCCESS, response.c_str());
 
-                    operationPerformed = "WRITE";
-                } else if (tokens[1] == "REPLACE") {
-                    string response = replaceMessageInFile(user, tokens[2], true, undoCommitOperation);
+                    operationPerformed = WRITE;
+                } else if (tokens[2] == REPLACE) {
+                    string response = replaceMessageInFile(user, tokens[3], true, undoCommitOperation);
 
-                    bool replaceCommandFailed = response.find("UNKNOWN") != string::npos;
-                    string responseText =  replaceCommandFailed ? "COMMIT_UNSUCCESS" : "COMMIT_SUCCESS";
+                    bool replaceCommandFailed = response.find(UNKNOWN) != string::npos;
+                    string responseText =  replaceCommandFailed ? COMMIT_UNSUCCESS : COMMIT_SUCCESS;
 
                     sendMessage(5.0, responseText.c_str(), response.c_str());
                     if (replaceCommandFailed) {
                         break;
                     }
 
-                    operationPerformed = "REPLACE";
+                    operationPerformed = REPLACE;
                 }
 
                 currentStatus = AWAITING_SUCCESS_OR_UNDO_BROADCAST;
-            } else if (inputCommand.rfind("SUCCESS_NOOP", 0) == 0 && currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
+            } else if (tokens[1] == SUCCESS_NOOP and currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
                 releaseWriteLock(operationPerformed);
                 break;
-            } else if (inputCommand.rfind("UNSUCCESS_UNDO", 0) == 0 && currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
+            } else if (tokens[1] == UNSUCCESS_UNDO and currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
                 undoCommitOperation();
                 releaseWriteLock(operationPerformed);
                 break;
@@ -130,7 +128,7 @@ void handle_sync_server_client(int master_socket) {
 
             pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
         }
-        // If timeout occured, check which state am I in. Based on that, take action // RElease lock if held
+
         if (n == recv_nodata) {
             if (currentStatus == IDLE or currentStatus == PRECOMMIT_ACKNOWLEDGED) {
 
