@@ -67,7 +67,7 @@ void handle_sync_server_client(int master_socket) {
         char req[ALEN];
         int n;
 
-        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 1000)) != recv_nodata) {
+        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 2000)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             if (n == 0) {
                 cout << "Connection closed by Master Node." << endl;

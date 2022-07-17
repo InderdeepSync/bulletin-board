@@ -65,7 +65,7 @@ void* communicateWithPeer(void* args[]) {
     const int ALEN = 256;
     char response[ALEN];
     int n;
-    while ((n = recv_nonblock(socketId, response, ALEN - 1, 100000000)) != recv_nodata) {
+    while ((n = recv_nonblock(socketId, response, ALEN - 1, 2000)) != recv_nodata) {
         if (n == 0) {
             cout << "Connection closed by " + peerHost + ":" + peerPort << endl;
             break;
