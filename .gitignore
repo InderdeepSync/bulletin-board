@@ -13,3 +13,4 @@ cmake-build-debug
 bbserv
 bbserv.pid
 bbfile
+deployment

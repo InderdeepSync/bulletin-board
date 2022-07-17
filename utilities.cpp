@@ -8,7 +8,7 @@
 
 // Borrowed from https://java2blog.com/split-string-space-cpp/
 void tokenize(std::string const &str, const char *delim,
-              std::vector<std::string> &out) {
+              std::vector<std::string> &out) { // TODO: Refactor to return the tokens vector instead of out parameter
     char *token = strtok(const_cast<char *>(str.c_str()), delim);
     while (token != nullptr) {
         out.emplace_back(token);
@@ -35,7 +35,7 @@ void readConfigurationParametersFromFile(const string& configurationFile, int &t
         // The file exists on disk. No processing would have been necessary if the file was not present.
         char *lineContent = new char[255];
         while (readline(file, lineContent, 255) != recv_nodata) {
-            string trimmedContent = trim(const_cast<char *>(lineContent));
+            string trimmedContent = trim(lineContent);
             if (trimmedContent.empty()) {
                 continue;
             }
@@ -79,7 +79,7 @@ string readKeyFromConfigurationFile(string keyToRead, string configurationFile, 
         // The file exists on disk. No processing would have been necessary if the file was not present.
         char *lineContent = new char[255];
         while (readline(file, lineContent, 255) != recv_nodata) {
-            string trimmedContent = trim(const_cast<char *>(lineContent));
+            string trimmedContent = trim(lineContent);
             if (trimmedContent.empty()) {
                 continue;
             }
@@ -131,10 +131,10 @@ void cleanup_handler(void *arg ) {
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }
 
-string createMessage(float code, char responseText[], char additionalInfo[]) {
+string createMessage(float code, char responseText[], bool shouldTerminateWithNewline, char additionalInfo[]) {
     char buffer[255];
     memset(buffer, 0, sizeof buffer);
-    snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
+    snprintf(buffer, 255, "%2.1f %s %s%s", code, responseText, additionalInfo, shouldTerminateWithNewline ? "\n" : "");
 
     return string(buffer);
 }

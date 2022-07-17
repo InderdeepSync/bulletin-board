@@ -173,14 +173,14 @@ int main(int argc, char **argv, char *envp[]) {
         peers.emplace_back(string(argv[i + optind]));
     }
 
-    int totalPeers = peers.size();
-    char* board_server_arguments[totalPeers + 4];
+    unsigned long totalPeers = peers.size();
+    const char* board_server_arguments[totalPeers + 4];
     board_server_arguments[0] = "executableName";
     board_server_arguments[1] = strdup(std::to_string(bulletinBoardServerPort).c_str());
     board_server_arguments[2] = strdup(std::to_string(tmax).c_str());
 
     for (int i = 0; i < totalPeers; i++) {
-        board_server_arguments[i + 3] = const_cast<char *>(peers[i].c_str());
+        board_server_arguments[i + 3] = peers[i].c_str();
     }
     board_server_arguments[totalPeers + 3] = nullptr;
 

@@ -20,7 +20,7 @@ void acquireWriteLock(string currentCommand);
 
 void releaseWriteLock(string currentCommand);
 
-string writeOperation(const string &user, const string &message, function<void()> &undoWrite);
+string writeOperation(const string &user, const string &message, bool holdLock, function<void()> &undoWrite);
 
 void readMessageFromFile(int messageNumberToRead, int socketToRespond);
 
