@@ -15,11 +15,18 @@ void tokenize(std::string const &str, const char *delim,
 
 void cleanup_handler(void *arg );
 
-void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend);
+void sendMessageToSocket(float code, const char responseText[], const char additionalInfo[], int socketToSend);
 
 string createMessage(float code, char responseText[], bool shouldTerminateWithNewline, char additionalInfo[]);
 
 static const string bulletinBoardGreetingText = "Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg";
+
+static char* const READY = "READY";
+static char* const PRECOMMIT = "PRECOMMIT";
+static char* const COMMIT = "COMMIT";
+static char* const ABORT = "ABORT";
+static char* const SUCCESS_NOOP = "SUCCESS_NOOP";
+static char* const UNSUCCESS_UNDO = "UNSUCCESS_UNDO";
 
 std::string trim(const std::string &s);
 
