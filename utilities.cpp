@@ -139,7 +139,7 @@ string createMessage(float code, char responseText[], bool shouldTerminateWithNe
     return string(buffer);
 }
 
-void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend) {
+void sendMessageToSocket(float code, const char responseText[], const char additionalInfo[], int socketToSend) {
     char buffer[255];
     memset(buffer, 0, sizeof buffer);
     snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);

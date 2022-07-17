@@ -25,7 +25,7 @@ using namespace std;
 vector<pthread_t> syncServerThreads;
 long int syncronizationMasterSocket;
 
-const int NUMBER_OF_SYNCRONIZATION_THREADS = 3;
+const int NUMBER_OF_SYNCRONIZATION_THREADS = 1;
 int syncServerPort;
 
 enum SyncSlaveServerStatus {
@@ -54,7 +54,7 @@ void handle_sync_server_client(int master_socket) {
 
         cout << "########## Communication Channel with Peer Established ##########" << endl;
 
-        auto sendMessage = [&](float code, char responseText[], char additionalInfo[]) {
+        auto sendMessage = [&](float code, const char responseText[], const char additionalInfo[]) {
             sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
 
@@ -67,7 +67,7 @@ void handle_sync_server_client(int master_socket) {
         char req[ALEN];
         int n;
 
-        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 10000)) != recv_nodata) {
+        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 1000)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             if (n == 0) {
                 cout << "Connection closed by Master Node." << endl;
@@ -100,7 +100,7 @@ void handle_sync_server_client(int master_socket) {
             } else if (inputCommand.rfind("COMMIT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
                 if (tokens[1] == "WRITE") {
                     string response = writeOperation(user, tokens[2], true, undoCommitOperation);
-                    sendMessage(5.0, "COMMIT_SUCCESS", const_cast<char*>(response.c_str()));
+                    sendMessage(5.0, "COMMIT_SUCCESS", response.c_str());
 
                     operationPerformed = "WRITE";
                 } else if (tokens[1] == "REPLACE") {
@@ -109,7 +109,7 @@ void handle_sync_server_client(int master_socket) {
                     bool replaceCommandFailed = response.find("UNKNOWN") != string::npos;
                     string responseText =  replaceCommandFailed ? "COMMIT_UNSUCCESS" : "COMMIT_SUCCESS";
 
-                    sendMessage(5.0, const_cast<char*>(responseText.c_str()), const_cast<char*>(response.c_str()));
+                    sendMessage(5.0, responseText.c_str(), response.c_str());
                     if (replaceCommandFailed) {
                         break;
                     }
