@@ -20,8 +20,6 @@
 
 using namespace std;
 
-function<void()> NO_OPERATION = [](){};
-
 vector<pthread_t> bulletinBoardServerThreads;
 long int bulletinBoardMasterSocket;
 
@@ -68,10 +66,8 @@ void handle_bulletin_board_client(int master_socket) {
                 req[n - 1] = '\0';
             }
 
-            string inputCommand = req;
-            cout << "Command Received from Client: " << inputCommand << endl;
-
-            vector<string> tokens = tokenize(string(inputCommand), " ");
+            cout << "Command Received from Client: " << req << endl;
+            vector<string> tokens = tokenize(string(req), " ");
 
             if (tokens[0] == "QUIT") {
                 break;
@@ -86,15 +82,39 @@ void handle_bulletin_board_client(int master_socket) {
                     user = tokens[1];
                     sendMessage(1.0, "HELLO", user.c_str());
                 }
-            } else if (tokens[0] == "READ") {
+            } else if (tokens[0] == READ) {
                 readMessageFromFile(stoi(tokens[1]), slave_socket);
-            } else if (inputCommand.rfind("WRITE", 0) == 0) {
-                acquireWriteLock("WRITE");
-                string response = writeOperation(user, tokens[1], NO_OPERATION);
-                releaseWriteLock("WRITE");
+            } else if (tokens[0] == WRITE) {
+                unsigned long peersCount = peersList.size();
+                if (peersCount == 0) {
+                    string response = writeOperation(user, tokens[1], false, NO_OPERATION);
+                    send(slave_socket, response.c_str(), response.size(), 0);
+                } else {
+                    vector<pthread_t> peerThreads;
+                    resetPeerCommunicationGlobalVars(peersCount);
+                    for (const string& peer: peersList) {
+                        pthread_t tt;
+                        const char *arguments[] = {peer.c_str(), user.c_str(), req, tokens[1].c_str(), nullptr};
+                        if (pthread_create(&tt, nullptr, (void*(*)(void*))communicateWithPeer, (void*)arguments) != 0) {
+                            perror("pthread_create");
+                        }
+                        peerThreads.push_back(tt);
+                    }
 
-                send(slave_socket, response.c_str(), response.size(), 0);
-            } else if (inputCommand.rfind("REPLACE", 0) == 0) {
+                    void* operationResponse = nullptr;
+                    for (pthread_t peerThread: peerThreads) {
+                        if (operationResponse == nullptr) {
+                            pthread_join(peerThread, &operationResponse);
+                        } else {
+                            pthread_join(peerThread, nullptr);
+                        }
+                    }
+
+                    string response = (char*)operationResponse;
+                    send(slave_socket, response.c_str(), response.size(), 0);
+                }
+
+            } else if (tokens[0] == "REPLACE") {
                 string response = replaceMessageInFile(user, tokens[1], false, NO_OPERATION);
                 send(slave_socket, response.c_str(), response.size(), 0);
             } else {

@@ -11,7 +11,7 @@ board-server.o: tcp-utils.o utilities.o file-operations.o logger.o peer-communic
 sync-server.o: tcp-utils.o utilities.o file-operations.o logger.o
 	g++ -lpthread -c -o sync-server.o sync-server.cpp
 
-peer-communication.o: tcp-utils.o utilities.o
+peer-communication.o: tcp-utils.o utilities.o file-operations.o logger.o
 	g++ -lpthread -c -o peer-communication.o peer-communication.cpp
 
 tcp-utils.o:

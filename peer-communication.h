@@ -4,6 +4,6 @@
 
 void* communicateWithPeer(void* args[]);
 
-void resetPeerCommunicationGlobalVars(int numberOfPeers);
+void resetPeerCommunicationGlobalVars(unsigned long numberOfPeers);
 
 #endif //BULLETIN_BOARD_PEER_COMMUNICATION_H
