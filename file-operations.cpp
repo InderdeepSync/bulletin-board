@@ -128,7 +128,7 @@ string writeOperation(const string &user, const string &message, bool holdLock, 
     snprintf(message_line, 255, "%d/%s/%s\n", message_number, user.c_str(), message.c_str());
 
     write(fd, message_line, strlen(message_line));
-    string response = createMessage(3.0, "WROTE", !holdLock, const_cast<char *>(std::to_string(message_number++).c_str()));
+    string response = createMessage(3.0, "WROTE", to_string(message_number++).c_str(), !holdLock);
     close(fd);
     if (!holdLock) {
         releaseWriteLock("WRITE");
@@ -144,7 +144,7 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
 
         sendMessageToSocket(2.1, "UNKNOWN", additionalInfo, socketToRespond);
     } else {
-        size_t threadId = std::hash<std::thread::id>{}(std::this_thread::get_id());
+        size_t threadId = hash<thread::id>{}(this_thread::get_id());
 
         char msg[256];
         memset(msg, 0, sizeof msg);
@@ -295,14 +295,13 @@ void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string 
 }
 
 string replaceMessageInFile(const string& user, const string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace) {
-    vector<string> replaceArguments;
-    tokenize(messageNumberAndMessage, "/", replaceArguments);
+    vector<string> replaceArguments = tokenize(messageNumberAndMessage, "/");
 
     const int messageNumberToReplace = stoi(replaceArguments[0]);
     string new_message = replaceArguments[1];
 
     if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
-        return createMessage(3.1, "UNKNOWN", !holdLock, const_cast<char *> (std::to_string(messageNumberToReplace).c_str()));
+        return createMessage(3.1, "UNKNOWN", to_string(messageNumberToReplace).c_str(), !holdLock);
     } else {
         acquireWriteLock("REPLACE");
 
@@ -314,10 +313,12 @@ string replaceMessageInFile(const string& user, const string& messageNumberAndMe
         };
 
         optimalReplaceAlgorithm(user, messageNumberToReplace, new_message);
+        string response = createMessage(3.0, "WROTE", to_string(messageNumberToReplace).c_str(), !holdLock);
+
         if (!holdLock) {
             releaseWriteLock("REPLACE");
         }
-        return createMessage(3.0, "WROTE", !holdLock, const_cast<char *> (std::to_string(messageNumberToReplace).c_str()));
+        return response;
     }
 }
 
@@ -330,8 +331,7 @@ pair<string, string> getMessageNumberInfo(int messageNumber) {
 
     while (readline(fileDescriptor, textLine, ALEN - 1) != recv_nodata) {
         if (l == messageNumber) {
-            vector<string> lineTokens;
-            tokenize(string(textLine), "/", lineTokens);
+            vector<string> lineTokens = tokenize(string(textLine), "/");
 
             close(fileDescriptor);
             return make_pair(lineTokens[1], lineTokens[2]);

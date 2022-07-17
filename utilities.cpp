@@ -7,13 +7,15 @@
 #include "file-operations.h"
 
 // Borrowed from https://java2blog.com/split-string-space-cpp/
-void tokenize(std::string const &str, const char *delim,
-              std::vector<std::string> &out) { // TODO: Refactor to return the tokens vector instead of out parameter
+vector<string> tokenize(string const &str, const char *delim) {
+    vector<string> tokens;
     char *token = strtok(const_cast<char *>(str.c_str()), delim);
     while (token != nullptr) {
-        out.emplace_back(token);
+        tokens.emplace_back(token);
         token = strtok(nullptr, delim);
     }
+
+    return tokens;
 }
 
 int createMasterSocket(int port) {
@@ -39,8 +41,7 @@ void readConfigurationParametersFromFile(const string& configurationFile, int &t
             if (trimmedContent.empty()) {
                 continue;
             }
-            std::vector<std::string> keyValuePair;
-            tokenize(lineContent, "=", keyValuePair);
+            vector<string> keyValuePair = tokenize(lineContent, "=");
 
             string key = keyValuePair[0], value = keyValuePair[1];
             if (key == "THMAX") {
@@ -56,7 +57,8 @@ void readConfigurationParametersFromFile(const string& configurationFile, int &t
                 bbfile = value;
             }
             if (key == "PEERS") {
-                tokenize(value, " ", peers);
+                vector<string> configFilePeers = tokenize(value, " ");
+                peers.insert(peers.end(), configFilePeers.begin(), configFilePeers.end());
             }
             if (key == "DAEMON") {
                 isDaemon = is_true(value);
@@ -83,8 +85,7 @@ string readKeyFromConfigurationFile(string keyToRead, string configurationFile, 
             if (trimmedContent.empty()) {
                 continue;
             }
-            std::vector<std::string> keyValuePair;
-            tokenize(lineContent, "=", keyValuePair);
+            std::vector<std::string> keyValuePair = tokenize(lineContent, "=");
 
             if (keyValuePair[0] == keyToRead) {
                 result = keyValuePair[1];
@@ -131,7 +132,7 @@ void cleanup_handler(void *arg ) {
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }
 
-string createMessage(float code, char responseText[], bool shouldTerminateWithNewline, char additionalInfo[]) {
+string createMessage(float code, const char responseText[], const char additionalInfo[], bool shouldTerminateWithNewline) {
     char buffer[255];
     memset(buffer, 0, sizeof buffer);
     snprintf(buffer, 255, "%2.1f %s %s%s", code, responseText, additionalInfo, shouldTerminateWithNewline ? "\n" : "");

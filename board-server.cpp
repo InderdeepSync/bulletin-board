@@ -50,11 +50,11 @@ void handle_bulletin_board_client(int master_socket) {
 
         cout << "########## New Remote Client Accepted ##########" << endl;
 
-        auto sendMessage = [&](float code, char responseText[], char additionalInfo[]) {
+        auto sendMessage = [&](float code, const char responseText[], const char additionalInfo[]) {
             sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
 
-        sendMessage(0.0, "", const_cast<char *>(bulletinBoardGreetingText.c_str()));
+        sendMessage(0.0, "", bulletinBoardGreetingText.c_str());
 
         const int ALEN = 256;
         char req[ALEN];
@@ -71,23 +71,22 @@ void handle_bulletin_board_client(int master_socket) {
             string inputCommand = req;
             cout << "Command Received from Client: " << inputCommand << endl;
 
-            std::vector<std::string> tokens;
-            tokenize(string(inputCommand), " ", tokens);
+            vector<string> tokens = tokenize(string(inputCommand), " ");
 
-            if (inputCommand.rfind("QUIT", 0) == 0) {
+            if (tokens[0] == "QUIT") {
                 break;
             } else if (tokens.size() != 2) {
                 sendMessage(0.0, "ERROR", "Malformed Command Received from Client!" );
-            } else if (inputCommand.rfind("USER", 0) == 0) {
+            } else if (tokens[0] == "USER") {
                 // TODO: How to handle multiple USER commands during a single session??
                 if (tokens[1].find('/') != std::string::npos) {
                     // The name supplied by client contains '/', which isn't allowed
                     sendMessage(1.2, "ERROR USER", "The 'username' argument cannot contain '/'");
                 } else {
                     user = tokens[1];
-                    sendMessage(1.0, "HELLO", const_cast<char *>(user.c_str()));
+                    sendMessage(1.0, "HELLO", user.c_str());
                 }
-            } else if (inputCommand.rfind("READ", 0) == 0) {
+            } else if (tokens[0] == "READ") {
                 readMessageFromFile(stoi(tokens[1]), slave_socket);
             } else if (inputCommand.rfind("WRITE", 0) == 0) {
                 acquireWriteLock("WRITE");

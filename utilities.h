@@ -10,14 +10,13 @@
 
 using namespace std;
 
-void tokenize(std::string const &str, const char *delim,
-              std::vector<std::string> &out);
+vector<string> tokenize(string const &str, const char *delim);
 
 void cleanup_handler(void *arg );
 
 void sendMessageToSocket(float code, const char responseText[], const char additionalInfo[], int socketToSend);
 
-string createMessage(float code, char responseText[], bool shouldTerminateWithNewline, char additionalInfo[]);
+string createMessage(float code, const char responseText[], const char additionalInfo[], bool shouldTerminateWithNewline);
 
 static const string bulletinBoardGreetingText = "Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg";
 
