@@ -113,7 +113,8 @@ off_t getBulletinBoardFileSize() {
     return fileSize;
 }
 
-string writeOperation(const string &user, const string &message, function<void()> &undoWrite) {
+string writeOperation(const string &user, const string &message, bool holdLock, function<void()> &undoWrite) {
+    acquireWriteLock("WRITE");
     int fd = open(bulletinBoardFile.c_str(), O_WRONLY | O_APPEND,
                   S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
 
@@ -127,9 +128,11 @@ string writeOperation(const string &user, const string &message, function<void()
     snprintf(message_line, 255, "%d/%s/%s\n", message_number, user.c_str(), message.c_str());
 
     write(fd, message_line, strlen(message_line));
-    string response = createMessage(3.0, "WROTE", const_cast<char*>(std::to_string(message_number++).c_str()));
+    string response = createMessage(3.0, "WROTE", !holdLock, const_cast<char *>(std::to_string(message_number++).c_str()));
     close(fd);
-
+    if (!holdLock) {
+        releaseWriteLock("WRITE");
+    }
     return response;
 }
 
@@ -299,7 +302,7 @@ string replaceMessageInFile(const string& user, const string& messageNumberAndMe
     string new_message = replaceArguments[1];
 
     if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
-        return createMessage(3.1, "UNKNOWN", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()));
+        return createMessage(3.1, "UNKNOWN", !holdLock, const_cast<char *> (std::to_string(messageNumberToReplace).c_str()));
     } else {
         acquireWriteLock("REPLACE");
 
@@ -314,7 +317,7 @@ string replaceMessageInFile(const string& user, const string& messageNumberAndMe
         if (!holdLock) {
             releaseWriteLock("REPLACE");
         }
-        return createMessage(3.0, "WROTE", const_cast<char*> (std::to_string(messageNumberToReplace).c_str()));
+        return createMessage(3.0, "WROTE", !holdLock, const_cast<char *> (std::to_string(messageNumberToReplace).c_str()));
     }
 }
 

@@ -17,7 +17,7 @@ void cleanup_handler(void *arg );
 
 void sendMessageToSocket(float code, char responseText[], char additionalInfo[], int socketToSend);
 
-string createMessage(float code, char responseText[], char additionalInfo[]);
+string createMessage(float code, char responseText[], bool shouldTerminateWithNewline, char additionalInfo[]);
 
 static const string bulletinBoardGreetingText = "Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg";
 

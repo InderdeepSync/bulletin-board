@@ -99,8 +99,7 @@ void handle_sync_server_client(int master_socket) {
                 break;
             } else if (inputCommand.rfind("COMMIT", 0) == 0 && currentStatus == PRECOMMIT_ACKNOWLEDGED) {
                 if (tokens[1] == "WRITE") {
-                    acquireWriteLock("WRITE");
-                    string response = writeOperation(user, tokens[2], undoCommitOperation);
+                    string response = writeOperation(user, tokens[2], true, undoCommitOperation);
                     sendMessage(5.0, "COMMIT_SUCCESS", const_cast<char*>(response.c_str()));
 
                     operationPerformed = "WRITE";
