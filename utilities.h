@@ -26,6 +26,11 @@ static char* const COMMIT = "COMMIT";
 static char* const ABORT = "ABORT";
 static char* const SUCCESS_NOOP = "SUCCESS_NOOP";
 static char* const UNSUCCESS_UNDO = "UNSUCCESS_UNDO";
+static char* const WRITE = "WRITE";
+static char* const REPLACE = "REPLACE";
+static char* const UNKNOWN = "UNKNOWN";
+static char* const COMMIT_SUCCESS = "COMMIT_SUCCESS";
+static char* const COMMIT_UNSUCCESS = "COMMIT_UNSUCCESS";
 
 std::string trim(const std::string &s);
 
