@@ -87,8 +87,7 @@ void handle_sync_server_client(int master_socket) {
             string inputCommand = req;
             cout << "Command Received from Client: " << inputCommand << endl;
 
-            vector<string> tokens;
-            tokenize(inputCommand, " ", tokens);
+            vector<string> tokens = tokenize(inputCommand, " ");
 
             if (inputCommand.rfind("PRECOMMIT", 0) == 0 && currentStatus == IDLE) {
                 user = tokens[1];
