@@ -33,8 +33,7 @@ enum SyncSlaveServerStatus {
 };
 
 void handle_sync_server_client(int master_socket) {
-    pthread_t currentThread = pthread_self();
-    cout << "New Syncronization Thread " << currentThread <<  " launched." << endl;
+    printf("New Syncronization Thread %lu launched.\n", pthread_self());
 
     sockaddr_in client_address{}; // the address of the client...
     unsigned int client_address_len = sizeof(client_address); // ... and its length
@@ -67,7 +66,7 @@ void handle_sync_server_client(int master_socket) {
         char req[ALEN];
         int n;
 
-        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 2000)) != recv_nodata) {
+        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 2000000)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             if (n == 0) {
                 cout << "Connection closed by Master Node." << endl;
@@ -84,43 +83,38 @@ void handle_sync_server_client(int master_socket) {
                 req[n - 2] = '\0';
             }
 
-            cout << "Command Received from Client: " << req << endl;
+            printf("Command Received from Master Node: %s\n", req);
             vector<string> tokens = tokenize(string(req), " ");
 
             if (tokens[1] == PRECOMMIT and currentStatus == IDLE) {
                 user = tokens[2];
                 sendMessage(5.0, READY, "User stored. Syncronization Server available.");
+                printf("PRECOMMIT acknowledged positively. Response to Master => 5.0 READY\n");
 
                 currentStatus = PRECOMMIT_ACKNOWLEDGED;
             } else if (tokens[1] == ABORT and currentStatus == PRECOMMIT_ACKNOWLEDGED) {
+                printf("Aborting Transaction. No further action needed.\n");
                 break;
             } else if (tokens[1] == COMMIT and currentStatus == PRECOMMIT_ACKNOWLEDGED) {
-                if (tokens[2] == WRITE) {
-                    string response = writeOperation(user, tokens[3], true, undoCommitOperation);
-                    sendMessage(5.0, COMMIT_SUCCESS, response.c_str());
+                auto operation = tokens[2] == WRITE ? writeOperation : replaceMessageInFile;
+                string response = operation(user, tokens[3], true, undoCommitOperation);
 
-                    operationPerformed = WRITE;
-                } else if (tokens[2] == REPLACE) {
-                    string response = replaceMessageInFile(user, tokens[3], true, undoCommitOperation);
+                bool operationFailed = response.find(UNKNOWN) != string::npos; // TODO: when should the operation be considered a failure?
+                string responseText = operationFailed ? COMMIT_UNSUCCESS : COMMIT_SUCCESS;
 
-                    bool replaceCommandFailed = response.find(UNKNOWN) != string::npos;
-                    string responseText =  replaceCommandFailed ? COMMIT_UNSUCCESS : COMMIT_SUCCESS;
+                sendMessage(5.0, responseText.c_str(), response.c_str());
+                printf("Requested Command COMMITted to disk successfully. Response to Master => 5.0 %s %s\n", responseText.c_str(), response.c_str());
 
-                    sendMessage(5.0, responseText.c_str(), response.c_str());
-                    if (replaceCommandFailed) {
-                        break;
-                    }
-
-                    operationPerformed = REPLACE;
-                }
-
+                operationPerformed = tokens[2];
                 currentStatus = AWAITING_SUCCESS_OR_UNDO_BROADCAST;
             } else if (tokens[1] == SUCCESS_NOOP and currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
                 releaseWriteLock(operationPerformed);
+                printf("Received Success confirmation from Master. Releasing Write lock.\n");
                 break;
             } else if (tokens[1] == UNSUCCESS_UNDO and currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
                 undoCommitOperation();
                 releaseWriteLock(operationPerformed);
+                printf("%s was successfully undone. Releasing Write lock.\n", operationPerformed.c_str());
                 break;
             } else {
                 // Invalid Command received from Peer.
@@ -135,6 +129,7 @@ void handle_sync_server_client(int master_socket) {
             } else if (currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
                 undoCommitOperation();
                 releaseWriteLock(operationPerformed);
+                printf("Timeout occurred: Master did not confirm the commit. %s undone as a precaution. Releasing Write lock\n", operationPerformed.c_str());
             }
         }
 
@@ -142,13 +137,13 @@ void handle_sync_server_client(int master_socket) {
         close(slave_socket);
         pthread_cleanup_pop(0);
 
-        cout << "########## Remote Connection Terminated ##########" << endl;
+        printf("########## Communication Channel with Peer Closed ##########\n");
     }
 }
 
 void startSyncServer() {
     syncronizationMasterSocket = createMasterSocket(syncServerPort);
-    cout << "Syncronization Server up and listening on port " << syncServerPort << endl;
+    printf("Syncronization Server up and listening on port %d.\n", syncServerPort);
 
     createThreads(NUMBER_OF_SYNCRONIZATION_THREADS, &handle_sync_server_client, (void*)syncronizationMasterSocket, syncServerThreads);
 }

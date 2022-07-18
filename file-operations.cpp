@@ -121,6 +121,7 @@ string writeOperation(const string &user, const string &message, bool holdLock, 
     off_t fileSizeBeforeWrite = getBulletinBoardFileSize();
     undoWrite = [fileSizeBeforeWrite](){
         truncate(bulletinBoardFile.c_str(), fileSizeBeforeWrite);
+        printf("UNDO: bbfile has been reset to previous state before COMMIT WRITE\n");
     };
 
     char message_line[255];
@@ -310,6 +311,7 @@ string replaceMessageInFile(const string& user, const string& messageNumberAndMe
         string oldMessage = messageInfo.second;
         undoReplace = [oldUser, messageNumberToReplace, oldMessage](){
             optimalReplaceAlgorithm(oldUser, messageNumberToReplace, oldMessage);
+            printf("UNDO: bbfile has been reset to previous state before COMMIT REPLACE\n");
         };
 
         optimalReplaceAlgorithm(user, messageNumberToReplace, new_message);

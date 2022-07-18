@@ -28,7 +28,7 @@ int tmax, bulletinBoardServerPort;
 
 void handle_bulletin_board_client(int master_socket) {
     pthread_t currentThread = pthread_self();
-    cout << "New Bulletin Board Thread " << currentThread <<  " launched." << endl;
+    printf("New Bulletin Board Thread %lu launched.\n", currentThread);
 
     sockaddr_in client_address{}; // the address of the client...
     unsigned int client_address_len = sizeof(client_address); // ... and its length
@@ -69,10 +69,10 @@ void handle_bulletin_board_client(int master_socket) {
             cout << "Command Received from Client: " << req << endl;
             vector<string> tokens = tokenize(string(req), " ");
 
-            if (tokens[0] == "QUIT") {
+            if (tokens.size() != 2) {
+                sendMessage(0.0, "ERROR", "Malformed Command Received from Client!. To Exit, type: QUIT bye" );
+            } else if (tokens[0] == "QUIT") {
                 break;
-            } else if (tokens.size() != 2) {
-                sendMessage(0.0, "ERROR", "Malformed Command Received from Client!" );
             } else if (tokens[0] == "USER") {
                 // TODO: How to handle multiple USER commands during a single session??
                 if (tokens[1].find('/') != std::string::npos) {
@@ -84,10 +84,11 @@ void handle_bulletin_board_client(int master_socket) {
                 }
             } else if (tokens[0] == READ) {
                 readMessageFromFile(stoi(tokens[1]), slave_socket);
-            } else if (tokens[0] == WRITE) {
+            } else if (tokens[0] == WRITE or tokens[0] == REPLACE) {
                 unsigned long peersCount = peersList.size();
                 if (peersCount == 0) {
-                    string response = writeOperation(user, tokens[1], false, NO_OPERATION);
+                    auto operation = tokens[0] == WRITE ? writeOperation : replaceMessageInFile;
+                    string response = operation(user, tokens[1], false, NO_OPERATION);
                     send(slave_socket, response.c_str(), response.size(), 0);
                 } else {
                     vector<pthread_t> peerThreads;
@@ -113,10 +114,6 @@ void handle_bulletin_board_client(int master_socket) {
                     string response = (char*)operationResponse;
                     send(slave_socket, response.c_str(), response.size(), 0);
                 }
-
-            } else if (tokens[0] == "REPLACE") {
-                string response = replaceMessageInFile(user, tokens[1], false, NO_OPERATION);
-                send(slave_socket, response.c_str(), response.size(), 0);
             } else {
                 sendMessage(0.0, "ERROR", "Invalid Command Entered!");
             }
@@ -139,7 +136,7 @@ void handle_bulletin_board_client(int master_socket) {
 
 void startBulletinBoardServer() {
     bulletinBoardMasterSocket = createMasterSocket(bulletinBoardServerPort);
-    cout << "Bulletin Board Server up and listening on port " << bulletinBoardServerPort << endl;
+    printf("Bulletin Board Server up and listening on port %d.\n", bulletinBoardServerPort);
 
     createThreads(tmax, &handle_bulletin_board_client, (void*)bulletinBoardMasterSocket, bulletinBoardServerThreads);
 }
