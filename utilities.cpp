@@ -144,7 +144,7 @@ void sendMessageToSocket(float code, const char responseText[], const char addit
     char buffer[255];
     memset(buffer, 0, sizeof buffer);
     snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
-    send(socketToSend, buffer, sizeof(buffer), 0);
+    send(socketToSend, buffer, strlen(buffer), 0);
 }
 
 const std::string WHITESPACE = " \n\r\t\f\v";
