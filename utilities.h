@@ -42,6 +42,8 @@ bool is_true(const string& value);
 
 int createMasterSocket(int port);
 
+char* convertStringToCharArray(string temp);
+
 void readConfigurationParametersFromFile(const string& configurationFile, int &tmax, int &bulletinBoardServerPort, int &syncServerPort, string &bbfile, vector<string> &peers, bool &isDaemon, bool &debuggingModeEnabled);
 
 void killThreads(vector<pthread_t> &threadsToKill);
