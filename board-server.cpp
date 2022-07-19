@@ -156,8 +156,7 @@ void terminateBulletinBoardThreadsAndCloseMasterSocket() {
 void reconfigureGlobalVariablesAndRestartBoardServer(string configurationFile) {
     vector<string> newPeersList;
 
-    int integerToIgnore; bool booleanToIgnore; string stringToIgnore;
-    readConfigurationParametersFromFile(configurationFile, tmax, bulletinBoardServerPort, integerToIgnore, stringToIgnore, newPeersList, booleanToIgnore, booleanToIgnore);
+    readConfigurationParametersFromFile(configurationFile, tmax, bulletinBoardServerPort, ref_ignore<int>, ref_ignore<string>, newPeersList, ref_ignore<bool>, ref_ignore<bool>);
     if (!newPeersList.empty()) {
         peersList = newPeersList;
     }
