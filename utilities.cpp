@@ -29,6 +29,12 @@ int createMasterSocket(int port) {
     return socketDescriptor;
 }
 
+char* convertStringToCharArray(string temp) {
+    char * tab2 = new char [temp.length()+1];
+    strcpy (tab2, temp.c_str());
+    return tab2;
+}
+
 void readConfigurationParametersFromFile(const string& configurationFile, int &tmax, int &bulletinBoardServerPort, int &syncServerPort,
                                          string &bbfile, vector<string> &peers, bool &isDaemon, bool &debuggingModeEnabled) {
     int file = open(configurationFile.c_str(), O_RDONLY,

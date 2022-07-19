@@ -21,7 +21,7 @@ enum SyncMasterServerStatus {
 
 unsigned long numberOfPositivePrecommitAcknowledgementsPending; bool shouldAbort = false;
 unsigned long numberOfSuccessfulCommitAcknowledgementsPending; bool shouldUndoCommit = false;
-bool operationPerformedOnMaster = false, didMasterOperationSucceed = false;
+bool operationPerformedOnMaster = false, didMasterOperationSucceed = false; string operationCompletionMessage;
 
 pthread_mutex_t peerCommunicationMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t peerCommunicationCondition = PTHREAD_COND_INITIALIZER;
@@ -41,18 +41,18 @@ int createSocket(string peerHost, string peerPort) {
     return socketId;
 }
 
-void* communicateWithPeer(void* args[]) {
-    auto peer = (char*)args[0];
+void* communicateWithPeer(void* arg) {
+    struct thread_info *tinfo = (thread_info*)arg;
+    char* peer = tinfo->peer;
     vector<string> peerHostPort = tokenize(peer, ":");
     string peerHost = peerHostPort[0];
     string peerPort = peerHostPort[1];
 
-    string user = (char*)args[1];
-    string command = (char*)args[2];
-    string secondArgumentToOperation = (char*) args[3];
+    string user = tinfo->user;
+    string command = tinfo->req;
+    string secondArgumentToOperation = tinfo->secondArgumentToOperation;
 
     auto operationToPerform = command.find(WRITE) != string::npos ? writeOperation : replaceMessageInFile;
-    string operationCompletionMessage;
 
     int socketId = createSocket(peerHost, peerPort);
 
@@ -172,7 +172,7 @@ void* communicateWithPeer(void* args[]) {
     close(socketId);
     printf("######### 2PC Protocol concluded. Connection with %s closed. #########\n", peer);
 
-    pthread_exit((void*)operationCompletionMessage.c_str());
+    pthread_exit(convertStringToCharArray(operationCompletionMessage));
 }
 
 void resetPeerCommunicationGlobalVars(unsigned long numberOfPeers) {
@@ -180,4 +180,5 @@ void resetPeerCommunicationGlobalVars(unsigned long numberOfPeers) {
     shouldAbort = shouldUndoCommit = false;
 
     operationPerformedOnMaster = didMasterOperationSucceed = false;
+    operationCompletionMessage.clear();
 }

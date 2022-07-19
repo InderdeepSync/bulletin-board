@@ -92,27 +92,33 @@ void handle_bulletin_board_client(int master_socket) {
                     send(slave_socket, response.c_str(), response.size(), 0);
                 } else {
                     vector<pthread_t> peerThreads;
+
+                    struct thread_info *tinfo = (thread_info*) calloc(peersCount, sizeof(*tinfo));
                     resetPeerCommunicationGlobalVars(peersCount);
-                    for (const string& peer: peersList) {
+                    for (int i = 0; i < peersCount; i++ ) {
+                        string peer = peersList.at(i);
+                        printf("Creating thread to communicate with %s\n", peer.c_str());
+
+                        tinfo[i].peer = convertStringToCharArray(peer);
+                        tinfo[i].user = convertStringToCharArray(user);
+                        tinfo[i].req = req;
+                        tinfo[i].secondArgumentToOperation = convertStringToCharArray(tokens[1]);
+
                         pthread_t tt;
-                        const char *arguments[] = {peer.c_str(), user.c_str(), req, tokens[1].c_str(), nullptr};
-                        if (pthread_create(&tt, nullptr, (void*(*)(void*))communicateWithPeer, (void*)arguments) != 0) {
+                        if (pthread_create(&tt, nullptr, (void*(*)(void*))communicateWithPeer, &tinfo[i]) != 0) {
                             perror("pthread_create");
                         }
                         peerThreads.push_back(tt);
                     }
 
-                    void* operationResponse = nullptr;
+                    void* operationResponse;
                     for (pthread_t peerThread: peerThreads) {
-                        if (operationResponse == nullptr) {
-                            pthread_join(peerThread, &operationResponse);
-                        } else {
-                            pthread_join(peerThread, nullptr);
-                        }
+                        pthread_join(peerThread, &operationResponse);
                     }
+                    free(tinfo);
 
-                    string response = (char*)operationResponse;
-                    send(slave_socket, response.c_str(), response.size(), 0);
+                    send(slave_socket, operationResponse, strlen((char*)operationResponse), 0);
+                    free(operationResponse);
                 }
             } else {
                 sendMessage(0.0, "ERROR", "Invalid Command Entered!");
