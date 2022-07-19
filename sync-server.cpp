@@ -51,7 +51,7 @@ void handle_sync_server_client(int master_socket) {
         }
         pthread_cleanup_push(cleanup_handler, &slave_socket);
 
-        cout << "########## Communication Channel with Peer Established ##########" << endl;
+        cout << "########## Communication Channel with Master Established ##########" << endl;
 
         auto sendMessage = [&](float code, const char responseText[], const char additionalInfo[]) {
             sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
