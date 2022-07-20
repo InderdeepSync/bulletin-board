@@ -54,7 +54,7 @@ int createThreads(int numberOfThreads, void (*serverHandler)(int), void* handler
 
 string readKeyFromConfigurationFile(string keyToRead, string configurationFile, string defaultValue);
 
-char* joinTwoStringsWithDelimiter(char* str1, const char* str2, char delimiter = '/');
+char* joinTwoStringsWithDelimiter(char* str1, const char* str2, char delimiter);
 
 static const string CONFIGURATION_FILE_BBFILE_KEY = "BBFILE";
 

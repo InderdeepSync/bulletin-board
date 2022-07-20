@@ -177,7 +177,7 @@ void* communicateWithPeer(void* arg) {
 
     if (n == recv_nodata or n == 0) {
         const char* errorReason = n == 0 ? "abruptly closed" : "timed out";
-        const char* expectedResponse = currentStatus == PRECOMMIT_SENT ? READY : joinTwoStringsWithDelimiter(COMMIT_SUCCESS, COMMIT_UNSUCCESS);
+        const char* expectedResponse = currentStatus == PRECOMMIT_SENT ? READY : joinTwoStringsWithDelimiter(COMMIT_SUCCESS, COMMIT_UNSUCCESS, '/');
         debug_printf("Socket Connection with peer %s %s. A %s message was expected.\n", peer, errorReason, expectedResponse);
 
         if (currentStatus == PRECOMMIT_SENT) {
