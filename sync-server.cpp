@@ -125,8 +125,8 @@ void handle_sync_server_client(int master_socket) {
         if (n == recv_nodata or n == 0) {
             const char *errorReason = n == 0 ? "abruptly closed" : "timed out";
             const char *expectedResponse = currentStatus == IDLE ? PRECOMMIT : currentStatus == PRECOMMIT_ACKNOWLEDGED
-                                                                               ? joinTwoStringsWithDelimiter(ABORT, COMMIT)
-                                                                               : joinTwoStringsWithDelimiter(SUCCESS_NOOP, UNSUCCESS_UNDO);
+                                                                               ? joinTwoStringsWithDelimiter(ABORT, COMMIT, '/')
+                                                                               : joinTwoStringsWithDelimiter(SUCCESS_NOOP, UNSUCCESS_UNDO, '/');
             debug_printf("Socket Connection with Master %s. A %s message was expected.\n", errorReason,
                          expectedResponse);
 
