@@ -14,9 +14,13 @@ bool getDebuggingPreference() {
     return shouldDelayOperations;
 }
 
-void debug_usleep(useconds_t usec) {
+void debug_sleep(int sleepDurationInSeconds) {
+    struct timespec tim, tim2;
+    tim.tv_sec = sleepDurationInSeconds;
+    tim.tv_nsec = 0L;
+
     if (shouldDelayOperations) {
-        usleep(usec);
+        nanosleep(&tim , &tim2);
     }
 }
 

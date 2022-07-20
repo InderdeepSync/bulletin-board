@@ -83,7 +83,7 @@ void acquireWriteLock(string currentCommand) {
     pthread_mutex_unlock(&mut);
 
     debug_printf("Entered Critical Region. %s operation by thread - %zu started!\n", currentCommand.c_str(), threadId);
-    debug_usleep(6000000);
+    debug_sleep(6);
 }
 
 void releaseWriteLock(string currentCommand) {
@@ -152,7 +152,7 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
         pthread_mutex_unlock(&mut);
 
         debug_printf("Entered Critical Region. READ operation by thread - %zu started!\n", threadId);
-        debug_usleep(3000000);
+        debug_sleep(3);
 
         int fd = open(bulletinBoardFile.c_str(), O_RDONLY,
                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
