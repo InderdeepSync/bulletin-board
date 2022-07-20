@@ -116,8 +116,13 @@ void handle_bulletin_board_client(int master_socket) {
                         pthread_join(peerThread, &operationResponse);
                     }
                     free(tinfo);
+                    char* response = (char*)operationResponse;
 
-                    send(slave_socket, operationResponse, strlen((char*)operationResponse), 0);
+                    if (strlen(response) == 0) {
+                        sendMessage(3.2, joinTwoStringsWithDelimiter("ERROR", tokens[0].c_str(), ' '), "Syncronization Failed");
+                    } else {
+                        send(slave_socket, response, strlen(response), 0);
+                    }
                     free(operationResponse);
                 }
             } else {
