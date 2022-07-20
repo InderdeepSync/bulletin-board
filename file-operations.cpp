@@ -115,6 +115,7 @@ string writeOperation(const string &user, const string &message, bool holdLock, 
     undoWrite = [fileSizeBeforeWrite](){
         truncate(bulletinBoardFile.c_str(), fileSizeBeforeWrite);
         debug_printf("UNDO: bbfile has been reset to previous state before COMMIT WRITE\n");
+        message_number--; // Valid as File lock is still held. Need to reset to account for the removal of the last message.
     };
 
     char message_line[255];

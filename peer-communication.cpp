@@ -116,7 +116,9 @@ void* communicateWithPeer(void* arg) {
                 }
             }
             pthread_mutex_unlock(&peerCommunicationMutex);
-
+//            if (peer == string("127.0.0.1:10002")) {
+//                debug_sleep(9);
+//            }
             if (shouldAbort) { // Yes, we are accessing it without obtaining lock. It's not illegal.
                 debug_printf("One or more peers timed out or weren't READY. Sending ABORT to peer %s.\n", peer);
                 sendMessage(5.0, ABORT, "");
