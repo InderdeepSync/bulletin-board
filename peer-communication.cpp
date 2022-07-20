@@ -7,6 +7,8 @@
 #include <set>
 #include <functional>
 #include <algorithm>
+#include <iterator>
+#include <sstream>
 
 #include "peer-communication.h"
 #include "file-operations.h"
@@ -159,6 +161,15 @@ void* communicateWithPeer(void* arg) {
             break;
         } else if (tokens[1] == COMMIT_UNSUCCESS and currentStatus == COMMIT_SENT) {
             debug_printf("Peer %s negatively acknowledged the COMMIT\n", peer);
+
+            const char* const delim = " ";
+            ostringstream imploded;
+
+            auto start = next(next(tokens.begin()));
+            copy(start, tokens.end(),
+                      ostream_iterator<string>(imploded, delim));
+            operationCompletionMessage = imploded.str();
+
             notifyThreadsToUndoCommit();
             break;
         }
