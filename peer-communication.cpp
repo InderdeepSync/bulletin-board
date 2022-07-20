@@ -90,7 +90,7 @@ void* communicateWithPeer(void* arg) {
     const int ALEN = 256;
     char response[ALEN];
     int n;
-    while ((n = recv_nonblock(socketId, response, ALEN - 1, 1000)) != recv_nodata) { // TODO: Reset Timeouts to sane values
+    while ((n = recv_nonblock(socketId, response, ALEN - 1, 7000)) != recv_nodata) {
         if (n == 0) {
             break;
         }
@@ -169,7 +169,7 @@ void* communicateWithPeer(void* arg) {
 
         if (currentStatus == PRECOMMIT_SENT) {
             notifyThreadsToAbort();
-        } else {
+        } else if (currentStatus == COMMIT_SENT) {
             notifyThreadsToUndoCommit();
         }
     }
