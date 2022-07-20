@@ -6,8 +6,8 @@ void setDebuggingPreference(bool isDelayEnabled);
 
 bool getDebuggingPreference();
 
-void logDebugMessage(char* message, int sleepDurationInSeconds = 0);
-
 void debug_printf(const char *format, ...);
+
+void debug_usleep(useconds_t usec);
 
 #endif //BULLETIN_BOARD_LOGGER_H

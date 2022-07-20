@@ -56,7 +56,7 @@ int createSocket(string peerHost, string peerPort) {
         return -1;
     }
     // we now have a valid, connected socket
-    printf("Successfully connected to peer %s:%s via socketId = %d\n", peerHost.c_str(), peerPort.c_str(), socketId);
+    debug_printf("Successfully connected to peer %s:%s via socketId = %d\n", peerHost.c_str(), peerPort.c_str(), socketId);
     return socketId;
 }
 
@@ -85,7 +85,7 @@ void* communicateWithPeer(void* arg) {
 
     sendMessage(5.0, PRECOMMIT, user.c_str());
     SyncMasterServerStatus currentStatus = PRECOMMIT_SENT;
-    printf("######### 2PC Started. Initial PRECOMMIT sent to peer %s #########\n", peer);
+    debug_printf("######### 2PC Started. Initial PRECOMMIT sent to peer %s #########\n", peer);
 
     const int ALEN = 256;
     char response[ALEN];
@@ -100,40 +100,40 @@ void* communicateWithPeer(void* arg) {
         }
 
         response[n - 1] = '\0';
-        printf("Response Received from Peer %s => %s\n", peer, response);
+        debug_printf("Response Received from Peer %s => %s\n", peer, response);
 
         vector<string> tokens = tokenize(string(response), " ");
 
         if (tokens[1] == READY and currentStatus == PRECOMMIT_SENT) {
-            printf("Peer %s is READY & acknowledged positively\n", peer);
+            debug_printf("Peer %s is READY & acknowledged positively\n", peer);
             pthread_mutex_lock(&peerCommunicationMutex);
             if (--numberOfPositivePrecommitAcknowledgementsPending == 0) {
                 pthread_cond_broadcast(&peerCommunicationCondition);
             } else {
                 while(numberOfPositivePrecommitAcknowledgementsPending > 0 and not shouldAbort) {
-                    printf("Waiting for response/timeout from other peers.\n");
+                    debug_printf("Waiting for response/timeout from other peers.\n");
                     pthread_cond_wait(&peerCommunicationCondition, &peerCommunicationMutex);
                 }
             }
             pthread_mutex_unlock(&peerCommunicationMutex);
 
             if (shouldAbort) { // Yes, we are accessing it without obtaining lock. It's not illegal.
-                printf("One or more peers timed out or weren't READY. Sending ABORT to peer %s.\n", peer);
+                debug_printf("One or more peers timed out or weren't READY. Sending ABORT to peer %s.\n", peer);
                 sendMessage(5.0, ABORT, "");
                 break;
             } else {
                 sendMessage(5.0, COMMIT, command.c_str());
                 currentStatus = COMMIT_SENT;
-                printf("Proceeding to next phase. COMMIT Sent to peer %s\n", peer);
+                debug_printf("Proceeding to next phase. COMMIT Sent to peer %s\n", peer);
             }
         } else if (tokens[1] == COMMIT_SUCCESS and currentStatus == COMMIT_SENT) {
-            printf("Peer %s has positively acknowledged the COMMIT\n", peer);
+            debug_printf("Peer %s has positively acknowledged the COMMIT\n", peer);
             pthread_mutex_lock(&peerCommunicationMutex);
             if (--numberOfSuccessfulCommitAcknowledgementsPending == 0) {
                 pthread_cond_broadcast(&peerCommunicationCondition);
             } else {
                 while(numberOfSuccessfulCommitAcknowledgementsPending > 0 and not shouldUndoCommit) {
-                    printf("Waiting for positive/negative acknowledgement for COMMIT or timeout from other peers.\n");
+                    debug_printf("Waiting for positive/negative acknowledgement for COMMIT or timeout from other peers.\n");
                     pthread_cond_wait(&peerCommunicationCondition, &peerCommunicationMutex);
                 }
             }
@@ -142,21 +142,21 @@ void* communicateWithPeer(void* arg) {
             if (!shouldUndoCommit) {
                 pthread_mutex_lock(&peerCommunicationMutex);
                 if (!operationPerformedOnMaster) {
-                    printf("Received COMMIT_SUCCESS from all peers. Performing Operation on Master Node\n");
+                    debug_printf("Received COMMIT_SUCCESS from all peers. Performing Operation on Master Node\n");
                     operationCompletionMessage = operationToPerform(user, secondArgumentToOperation, false, NO_OPERATION);
                     didMasterOperationSucceed = operationCompletionMessage.find(UNKNOWN) == string::npos;
                     operationPerformedOnMaster = true;
-                    printf("Operation %s on Master\n", didMasterOperationSucceed ? "executed succeeded" : "failed to execute");
+                    debug_printf("Operation %s on Master\n", didMasterOperationSucceed ? "executed succeeded" : "failed to execute");
                 }
                 pthread_mutex_unlock(&peerCommunicationMutex);
             }
             char* messageToSend = !shouldUndoCommit and didMasterOperationSucceed ? SUCCESS_NOOP: UNSUCCESS_UNDO;
-            printf("Transmitting latest transaction status %s to peer %s\n", messageToSend, peer);
+            debug_printf("Transmitting latest transaction status %s to peer %s\n", messageToSend, peer);
             sendMessage(5.0, messageToSend, "");
 
             break;
         } else if (tokens[1] == COMMIT_UNSUCCESS and currentStatus == COMMIT_SENT) {
-            printf("Peer %s negatively acknowledged the COMMIT\n", peer);
+            debug_printf("Peer %s negatively acknowledged the COMMIT\n", peer);
             notifyThreadsToUndoCommit();
             break;
         }

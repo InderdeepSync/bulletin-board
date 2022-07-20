@@ -69,10 +69,7 @@ AccessData concurrencyManagementData = AccessData{};
 void acquireWriteLock(string currentCommand) {
     size_t threadId = hash<thread::id>{}(this_thread::get_id());
 
-    char msg[256];
-    memset(msg, 0, sizeof msg);
-    snprintf(msg, 255, "Waiting to enter Critical Region. %s operation by thread - %zu pending!", currentCommand.c_str(), threadId);
-    logDebugMessage(msg, 0);
+    debug_printf("Waiting to enter Critical Region. %s operation by thread - %zu pending!\n", currentCommand.c_str(), threadId);
 
     pthread_mutex_lock(&mut);
     concurrencyManagementData.num_writers_waiting += 1;
@@ -85,18 +82,14 @@ void acquireWriteLock(string currentCommand) {
     concurrencyManagementData.writer_active = true;
     pthread_mutex_unlock(&mut);
 
-    memset(msg, 0, sizeof msg);
-    snprintf(msg, 255, "Entered Critical Region. %s operation by thread - %zu started!", currentCommand.c_str(), threadId);
-    logDebugMessage(msg, 6);
+    debug_printf("Entered Critical Region. %s operation by thread - %zu started!\n", currentCommand.c_str(), threadId);
+    debug_usleep(6000000);
 }
 
 void releaseWriteLock(string currentCommand) {
     size_t threadId = hash<thread::id>{}(this_thread::get_id());
 
-    char msg[256];
-    memset(msg, 0, sizeof msg);
-    snprintf(msg, 255, "Exiting Critical Region. %s operation by thread - %zu completed!", currentCommand.c_str(), threadId);
-    logDebugMessage(msg, 0);
+    debug_printf("Exiting Critical Region. %s operation by thread - %zu completed!\n", currentCommand.c_str(), threadId);
 
     pthread_mutex_lock(&mut);
     concurrencyManagementData.writer_active = false;
@@ -121,7 +114,7 @@ string writeOperation(const string &user, const string &message, bool holdLock, 
     off_t fileSizeBeforeWrite = getBulletinBoardFileSize();
     undoWrite = [fileSizeBeforeWrite](){
         truncate(bulletinBoardFile.c_str(), fileSizeBeforeWrite);
-        printf("UNDO: bbfile has been reset to previous state before COMMIT WRITE\n");
+        debug_printf("UNDO: bbfile has been reset to previous state before COMMIT WRITE\n");
     };
 
     char message_line[255];
@@ -147,10 +140,7 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
     } else {
         size_t threadId = hash<thread::id>{}(this_thread::get_id());
 
-        char msg[256];
-        memset(msg, 0, sizeof msg);
-        snprintf(msg, 255, "Waiting to enter Critical Region. READ operation by thread - %zu pending!", threadId);
-        logDebugMessage(msg, 0);
+        debug_printf("Waiting to enter Critical Region. READ operation by thread - %zu pending!\n", threadId);
 
         pthread_mutex_lock(&mut);
 
@@ -161,9 +151,8 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
         concurrencyManagementData.num_readers_active += 1;
         pthread_mutex_unlock(&mut);
 
-        memset(msg, 0, sizeof msg);
-        snprintf(msg, 255, "Entered Critical Region. READ operation by thread - %zu started!", threadId);
-        logDebugMessage(msg, 3);
+        debug_printf("Entered Critical Region. READ operation by thread - %zu started!\n", threadId);
+        debug_usleep(3000000);
 
         int fd = open(bulletinBoardFile.c_str(), O_RDONLY,
                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
@@ -181,9 +170,7 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
 
         close(fd);
 
-        memset(msg, 0, sizeof msg);
-        snprintf(msg, 255, "Exiting Critical Region. READ operation by thread - %zu completed!", threadId);
-        logDebugMessage(msg, 0);
+        debug_printf("Exiting Critical Region. READ operation by thread - %zu completed!\n", threadId);
 
         pthread_mutex_lock(&mut);
         concurrencyManagementData.num_readers_active -= 1;
@@ -311,7 +298,7 @@ string replaceMessageInFile(const string& user, const string& messageNumberAndMe
         string oldMessage = messageInfo.second;
         undoReplace = [oldUser, messageNumberToReplace, oldMessage](){
             optimalReplaceAlgorithm(oldUser, messageNumberToReplace, oldMessage);
-            printf("UNDO: bbfile has been reset to previous state before COMMIT REPLACE\n");
+            debug_printf("UNDO: bbfile has been reset to previous state before COMMIT REPLACE\n");
         };
 
         optimalReplaceAlgorithm(user, messageNumberToReplace, new_message);

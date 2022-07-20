@@ -14,12 +14,9 @@ bool getDebuggingPreference() {
     return shouldDelayOperations;
 }
 
-void logDebugMessage(char* message, int sleepDurationInSeconds) {
+void debug_usleep(useconds_t usec) {
     if (shouldDelayOperations) {
-        std::cout << message << std::endl;
-        if (sleepDurationInSeconds != 0) {
-            sleep(sleepDurationInSeconds);
-        }
+        usleep(usec);
     }
 }
 
