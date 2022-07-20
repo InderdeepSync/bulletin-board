@@ -146,11 +146,11 @@ string createMessage(float code, const char responseText[], const char additiona
     return string(buffer);
 }
 
-void sendMessageToSocket(float code, const char responseText[], const char additionalInfo[], int socketToSend) {
+ssize_t sendMessageToSocket(float code, const char responseText[], const char additionalInfo[], int socketToSend) {
     char buffer[255];
     memset(buffer, 0, sizeof buffer);
     snprintf(buffer, 255, "%2.1f %s %s\n", code, responseText, additionalInfo);
-    send(socketToSend, buffer, strlen(buffer), 0);
+    return send(socketToSend, buffer, strlen(buffer), 0);
 }
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -174,6 +174,14 @@ bool is_true(const string& value) {
     vector<string> truthyValues = {"1", "true"};
     return std::find(truthyValues.begin(), truthyValues.end(), value) != truthyValues.end();
 };
+
+char* joinTwoStringsWithDelimiter(char* str1, const char* str2, char delimiter) {
+    char* full_text = (char*)malloc(strlen(str1) + 1 + strlen(str2) + 1);
+    strcpy(full_text, str1 );
+    strcat(full_text, "/");
+    strcat(full_text, str2);
+    return full_text;
+}
 
 bool is_number(const std::string& s) {
     std::string::const_iterator it = s.begin();

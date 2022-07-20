@@ -14,7 +14,7 @@ vector<string> tokenize(string const &str, const char *delim);
 
 void cleanup_handler(void *arg );
 
-void sendMessageToSocket(float code, const char responseText[], const char additionalInfo[], int socketToSend);
+ssize_t sendMessageToSocket(float code, const char responseText[], const char additionalInfo[], int socketToSend);
 
 string createMessage(float code, const char responseText[], const char additionalInfo[], bool shouldTerminateWithNewline);
 
@@ -53,6 +53,8 @@ void killThreads(vector<pthread_t> &threadsToKill);
 int createThreads(int numberOfThreads, void (*serverHandler)(int), void* handlerArgument, vector<pthread_t> &threadsCollection);
 
 string readKeyFromConfigurationFile(string keyToRead, string configurationFile, string defaultValue);
+
+char* joinTwoStringsWithDelimiter(char* str1, const char* str2, char delimiter = '/');
 
 static const string CONFIGURATION_FILE_BBFILE_KEY = "BBFILE";
 
