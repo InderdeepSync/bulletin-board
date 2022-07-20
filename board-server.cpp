@@ -75,9 +75,9 @@ void handle_bulletin_board_client(int master_socket) {
                 break;
             } else if (tokens[0] == "USER") {
                 // TODO: How to handle multiple USER commands during a single session??
-                if (tokens[1].find('/') != std::string::npos) {
+                if (tokens[1].find('/') != std::string::npos or trim(tokens[1]).empty()) {
                     // The name supplied by client contains '/', which isn't allowed
-                    sendMessage(1.2, "ERROR USER", "The 'username' argument cannot contain '/'");
+                    sendMessage(1.2, "ERROR USER", "The 'username' argument must be non-empty & cannot contain '/'");
                 } else {
                     user = tokens[1];
                     sendMessage(1.0, "HELLO", user.c_str());
