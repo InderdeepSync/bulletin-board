@@ -8,6 +8,6 @@ bool getDebuggingPreference();
 
 void debug_printf(const char *format, ...);
 
-void debug_usleep(useconds_t usec);
+void debug_sleep(int sleepDurationInSeconds);
 
 #endif //BULLETIN_BOARD_LOGGER_H
