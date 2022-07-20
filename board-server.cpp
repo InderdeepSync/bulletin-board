@@ -49,7 +49,7 @@ void handle_bulletin_board_client(int master_socket) {
         cout << "########## New Remote Client Accepted ##########" << endl;
 
         auto sendMessage = [&](float code, const char responseText[], const char additionalInfo[]) {
-            sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
+            return sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
 
         sendMessage(0.0, "", bulletinBoardGreetingText.c_str());

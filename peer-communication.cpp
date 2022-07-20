@@ -12,6 +12,7 @@
 #include "file-operations.h"
 #include "tcp-utils.h"
 #include "utilities.h"
+#include "logger.h"
 
 using namespace std;
 
@@ -25,6 +26,24 @@ bool operationPerformedOnMaster = false, didMasterOperationSucceed = false; stri
 
 pthread_mutex_t peerCommunicationMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t peerCommunicationCondition = PTHREAD_COND_INITIALIZER;
+
+void notifyThreadsToAbort() {
+    pthread_mutex_lock(&peerCommunicationMutex);
+    if (!shouldAbort) {
+        shouldAbort = true;
+        pthread_cond_broadcast(&peerCommunicationCondition);
+    }
+    pthread_mutex_unlock(&peerCommunicationMutex);
+}
+
+void notifyThreadsToUndoCommit() {
+    pthread_mutex_lock(&peerCommunicationMutex);
+    if (!shouldUndoCommit) {
+        shouldUndoCommit = true;
+        pthread_cond_broadcast(&peerCommunicationCondition);
+    }
+    pthread_mutex_unlock(&peerCommunicationMutex);
+}
 
 int createSocket(string peerHost, string peerPort) {
     int socketId = connectbyport(peerHost.c_str(), peerPort.c_str());
@@ -55,9 +74,13 @@ void* communicateWithPeer(void* arg) {
     auto operationToPerform = command.find(WRITE) != string::npos ? writeOperation : replaceMessageInFile;
 
     int socketId = createSocket(peerHost, peerPort);
+    if (socketId == -1) {
+        notifyThreadsToAbort();
+        return convertStringToCharArray(operationCompletionMessage);
+    }
 
     auto sendMessage = [&](float code, const char responseText[], const char additionalInfo[]) {
-        sendMessageToSocket(code, responseText, additionalInfo, socketId);
+        return sendMessageToSocket(code, responseText, additionalInfo, socketId);
     };
 
     sendMessage(5.0, PRECOMMIT, user.c_str());
@@ -67,9 +90,8 @@ void* communicateWithPeer(void* arg) {
     const int ALEN = 256;
     char response[ALEN];
     int n;
-    while ((n = recv_nonblock(socketId, response, ALEN - 1, 2000000)) != recv_nodata) { // TODO: Reset Timeouts to sane values
+    while ((n = recv_nonblock(socketId, response, ALEN - 1, 1000)) != recv_nodata) { // TODO: Reset Timeouts to sane values
         if (n == 0) {
-            printf("Connection closed by %s\n", peer);
             break;
         }
         if (n < 0) {
@@ -135,37 +157,21 @@ void* communicateWithPeer(void* arg) {
             break;
         } else if (tokens[1] == COMMIT_UNSUCCESS and currentStatus == COMMIT_SENT) {
             printf("Peer %s negatively acknowledged the COMMIT\n", peer);
-            pthread_mutex_lock(&peerCommunicationMutex);
-            if (!shouldUndoCommit){
-                shouldUndoCommit = true;
-                pthread_cond_broadcast(&peerCommunicationCondition);
-
-            }
-            pthread_mutex_unlock(&peerCommunicationMutex);
+            notifyThreadsToUndoCommit();
             break;
         }
     }
 
-    if (n == recv_nodata) {
-        cout << "Peer Request Timed out." << endl;
-        pthread_mutex_lock(&peerCommunicationMutex);
+    if (n == recv_nodata or n == 0) {
+        const char* errorReason = n == 0 ? "abruptly closed" : "timed out";
+        const char* expectedResponse = currentStatus == PRECOMMIT_SENT ? READY : joinTwoStringsWithDelimiter(COMMIT_SUCCESS, COMMIT_UNSUCCESS);
+        debug_printf("Socket Connection with peer %s %s. A %s message was expected.\n", peer, errorReason, expectedResponse);
 
-        // We do not want to broadast in case either of the boolean flags is already true,
-        // which implies that an earlier thread previously timed out and other threads have been notified.
         if (currentStatus == PRECOMMIT_SENT) {
-            printf("Peer %s PRECOMMIT acknowledgemment timed out.\n", peer);
-            if (!shouldAbort) {
-                shouldAbort = true;
-                pthread_cond_broadcast(&peerCommunicationCondition);
-            }
-        } else if (currentStatus == COMMIT_SENT) {
-            printf("Peer %s COMMIT acknowledgement (positive/negative) timed out.\n", peer);
-            if (!shouldUndoCommit) {
-                shouldUndoCommit = true;
-                pthread_cond_broadcast(&peerCommunicationCondition);
-            }
+            notifyThreadsToAbort();
+        } else {
+            notifyThreadsToUndoCommit();
         }
-        pthread_mutex_unlock(&peerCommunicationMutex);
     }
 
     shutdown(socketId, SHUT_RDWR);

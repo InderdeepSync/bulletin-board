@@ -54,7 +54,7 @@ void handle_sync_server_client(int master_socket) {
         cout << "########## Communication Channel with Master Established ##########" << endl;
 
         auto sendMessage = [&](float code, const char responseText[], const char additionalInfo[]) {
-            sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
+            return sendMessageToSocket(code, responseText, additionalInfo, slave_socket);
         };
 
         SyncSlaveServerStatus currentStatus = IDLE;
@@ -69,7 +69,6 @@ void handle_sync_server_client(int master_socket) {
         while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 2000000)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             if (n == 0) {
-                cout << "Connection closed by Master Node." << endl;
                 break;
             }
             if (n < 0) {
@@ -87,6 +86,7 @@ void handle_sync_server_client(int master_socket) {
             vector<string> tokens = tokenize(string(req), " ");
 
             if (tokens[1] == PRECOMMIT and currentStatus == IDLE) {
+//                sleep(2);
                 user = tokens[2];
                 sendMessage(5.0, READY, "User stored. Syncronization Server available.");
                 printf("PRECOMMIT acknowledged positively. Response to Master => 5.0 READY\n");
@@ -123,13 +123,19 @@ void handle_sync_server_client(int master_socket) {
             pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
         }
 
-        if (n == recv_nodata) {
+        if (n == recv_nodata or n == 0) {
+            const char *errorReason = n == 0 ? "abruptly closed" : "timed out";
+            const char *expectedResponse = currentStatus == IDLE ? PRECOMMIT : currentStatus == PRECOMMIT_ACKNOWLEDGED
+                                                                               ? joinTwoStringsWithDelimiter(ABORT, COMMIT)
+                                                                               : joinTwoStringsWithDelimiter(SUCCESS_NOOP, UNSUCCESS_UNDO);
+            debug_printf("Socket Connection with Master %s. A %s message was expected.\n", errorReason,
+                         expectedResponse);
+
             if (currentStatus == IDLE or currentStatus == PRECOMMIT_ACKNOWLEDGED) {
 
             } else if (currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
                 undoCommitOperation();
                 releaseWriteLock(operationPerformed);
-                printf("Timeout occurred: Master did not confirm the commit. %s undone as a precaution. Releasing Write lock\n", operationPerformed.c_str());
             }
         }
 
