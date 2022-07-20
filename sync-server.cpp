@@ -173,8 +173,3 @@ int sync_server(char **argv) {
     pthread_exit(nullptr);
 }
 
-//int main(int argc, char **argv, char *envp[]) {
-//    setBulletinBoardFile("bbfile");
-//    setDebuggingPreference(false);
-//    sync_server(argv);
-//}
