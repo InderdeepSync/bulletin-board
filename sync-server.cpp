@@ -66,7 +66,7 @@ void handle_sync_server_client(int master_socket) {
         char req[ALEN];
         int n;
 
-        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 7000)) != recv_nodata) {
+        while ((n = recv_nonblock(slave_socket, req, ALEN - 1, 12000)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
             if (n == 0) {
                 break;
@@ -86,7 +86,6 @@ void handle_sync_server_client(int master_socket) {
             vector<string> tokens = tokenize(string(req), " ");
 
             if (tokens[1] == PRECOMMIT and currentStatus == IDLE) {
-//                sleep(2);
                 user = tokens[2];
                 sendMessage(5.0, READY, "User stored. Syncronization Server available.");
                 printf("PRECOMMIT acknowledged positively. Response to Master => 5.0 READY\n");
