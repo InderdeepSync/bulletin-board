@@ -107,6 +107,9 @@ off_t getBulletinBoardFileSize() {
 }
 
 string writeOperation(const string &user, const string &message, bool holdLock, function<void()> &undoWrite) {
+    if (access(bulletinBoardFile.c_str(), W_OK) != 0) {
+        return createMessage(3.2, "ERROR WRITE", "bbfile currently unavailable", !holdLock);
+    }
     acquireWriteLock("WRITE");
     int fd = open(bulletinBoardFile.c_str(), O_WRONLY | O_APPEND,
                   S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
@@ -123,6 +126,7 @@ string writeOperation(const string &user, const string &message, bool holdLock, 
     snprintf(message_line, 255, "%d/%s/%s\n", message_number, user.c_str(), message.c_str());
 
     write(fd, message_line, strlen(message_line));
+
     string response = createMessage(3.0, "WROTE", to_string(message_number++).c_str(), !holdLock);
     close(fd);
     if (!holdLock) {
@@ -139,8 +143,11 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
 
         sendMessageToSocket(2.1, "UNKNOWN", additionalInfo, socketToRespond);
     } else {
+        if (access(bulletinBoardFile.c_str(), R_OK) != 0) {
+            sendMessageToSocket(2.2, "ERROR READ", "bbfile currently unavailable", socketToRespond);
+            return;
+        }
         size_t threadId = hash<thread::id>{}(this_thread::get_id());
-
         debug_printf("Waiting to enter Critical Region. READ operation by thread - %zu pending!\n", threadId);
 
         pthread_mutex_lock(&mut);
@@ -157,7 +164,6 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
 
         int fd = open(bulletinBoardFile.c_str(), O_RDONLY,
                       S_IRGRP | S_IROTH | S_IRUSR | S_IWUSR | S_IWGRP | S_IWOTH);
-        // TODO: Handle failure in above gracefully, iff needed
 
         const int ALEN = 256;
         char temp[ALEN];
@@ -285,6 +291,12 @@ void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string 
 
 string replaceMessageInFile(const string& user, const string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace) {
     vector<string> replaceArguments = tokenize(convertStringToCharArray(messageNumberAndMessage), "/");
+    bool areArgumemntsInvalid = replaceArguments.size() != 2 or not is_number(replaceArguments[0]) or
+            replaceArguments[1].empty() or count(messageNumberAndMessage.begin(), messageNumberAndMessage.end(), '/') != 1;
+
+    if (areArgumemntsInvalid) {
+        return createMessage(3.2, "ERROR WRITE", "Incorrect format. Argument must be of the form msgNum/message.", !holdLock);
+    }
 
     const int messageNumberToReplace = stoi(replaceArguments[0]);
     string new_message = replaceArguments[1];
@@ -292,6 +304,9 @@ string replaceMessageInFile(const string& user, const string& messageNumberAndMe
     if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
         return createMessage(3.1, "UNKNOWN", to_string(messageNumberToReplace).c_str(), !holdLock);
     } else {
+        if (access(bulletinBoardFile.c_str(), R_OK | W_OK) != 0) {
+            return createMessage(3.2, "ERROR WRITE", "bbfile is currently unavailable", !holdLock);
+        }
         acquireWriteLock("REPLACE");
 
         auto messageInfo = getMessageNumberInfo(messageNumberToReplace);

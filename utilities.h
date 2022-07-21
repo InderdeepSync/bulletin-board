@@ -56,6 +56,8 @@ string readKeyFromConfigurationFile(string keyToRead, string configurationFile, 
 
 char* joinTwoStringsWithDelimiter(char* str1, const char* str2, char delimiter);
 
+bool is_number(const std::string& s);
+
 static const string CONFIGURATION_FILE_BBFILE_KEY = "BBFILE";
 
 static const string CONFIGURATION_FILE_DEBUG_KEY = "DEBUG";

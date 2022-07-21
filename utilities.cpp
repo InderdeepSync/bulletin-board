@@ -137,7 +137,7 @@ int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handler
 void cleanup_handler(void *arg ) {
     int *socketToClose = (int *) arg;
 
-    shutdown(*socketToClose, SHUT_RDWR); // TODO: Revisit the purpose and necessity of this.
+    shutdown(*socketToClose, SHUT_RDWR);
     close(*socketToClose);
     cout << "Closed SocketID "<< *socketToClose <<". Resource Cleanup Successful!" << endl;
 }
