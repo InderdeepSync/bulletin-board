@@ -83,7 +83,7 @@ void handle_sync_server_client(int master_socket) {
             }
 
             printf("Command Received from Master Node: %s\n", req);
-            vector<string> tokens = tokenize(string(req), " ");
+            vector<string> tokens = tokenize(req, " ");
 
             if (tokens[1] == PRECOMMIT and currentStatus == IDLE) {
                 user = tokens[2];

@@ -10,7 +10,7 @@
 
 using namespace std;
 
-vector<string> tokenize(string const &str, const char *delim);
+vector<string> tokenize(char* str, const char *delim);
 
 void cleanup_handler(void *arg );
 

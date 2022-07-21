@@ -7,12 +7,14 @@
 #include "file-operations.h"
 
 // Borrowed from https://java2blog.com/split-string-space-cpp/
-vector<string> tokenize(string const &str, const char *delim) {
+vector<string> tokenize(char* str, const char *delim) {
     vector<string> tokens;
-    char *token = strtok(const_cast<char *>(str.c_str()), delim);
+
+    char *saveptr;
+    char *token = strtok_r(str, delim, &saveptr);
     while (token != nullptr) {
         tokens.emplace_back(token);
-        token = strtok(nullptr, delim);
+        token = strtok_r(nullptr, delim, &saveptr);
     }
 
     return tokens;
@@ -63,7 +65,7 @@ void readConfigurationParametersFromFile(const string& configurationFile, int &t
                 bbfile = value;
             }
             if (key == "PEERS") {
-                vector<string> configFilePeers = tokenize(value, " ");
+                vector<string> configFilePeers = tokenize(convertStringToCharArray(value), " ");
                 peers.insert(peers.end(), configFilePeers.begin(), configFilePeers.end());
             }
             if (key == "DAEMON") {

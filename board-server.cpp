@@ -67,7 +67,7 @@ void handle_bulletin_board_client(int master_socket) {
             }
 
             cout << "Command Received from Client: " << req << endl;
-            vector<string> tokens = tokenize(string(req), " ");
+            vector<string> tokens = tokenize(req, " ");
 
             if (tokens.size() != 2) {
                 sendMessage(0.0, "ERROR", "Malformed Command Received from Client!. To Exit, type: QUIT bye" );
