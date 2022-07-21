@@ -62,15 +62,12 @@ void handle_bulletin_board_client(int master_socket) {
 
         while ((n = readline(slave_socket, req, ALEN - 1)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
-            if (req[n - 1] == '\r') {
-                req[n - 1] = '\0';
-            }
 
             cout << "Command Received from Client: " << req << endl;
             vector<string> tokens = tokenize(req, " ");
 
             if (tokens.size() != 2) {
-                sendMessage(0.0, "ERROR", "Malformed Command Received from Client!. To Exit, type: QUIT bye" );
+                sendMessage(0.0, "ERROR", "A Valid command must contain 2 tokens separated by ' '!. To Exit, type: QUIT bye");
             } else if (tokens[0] == "QUIT") {
                 break;
             } else if (tokens[0] == "USER") {
@@ -105,7 +102,7 @@ void handle_bulletin_board_client(int master_socket) {
                         tinfo[i].secondArgumentToOperation = convertStringToCharArray(tokens[1]);
 
                         pthread_t tt;
-                        if (pthread_create(&tt, nullptr, (void*(*)(void*))communicateWithPeer, &tinfo[i]) != 0) {
+                        if (pthread_create(&tt, nullptr, &communicateWithPeer, &tinfo[i]) != 0) {
                             perror("pthread_create");
                         }
                         peerThreads.push_back(tt);

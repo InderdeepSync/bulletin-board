@@ -6,7 +6,6 @@
 #include "tcp-utils.h"
 #include "file-operations.h"
 
-// Borrowed from https://java2blog.com/split-string-space-cpp/
 vector<string> tokenize(char* str, const char *delim) {
     vector<string> tokens;
 
@@ -35,8 +34,8 @@ int createMasterSocket(int port) {
 }
 
 char* convertStringToCharArray(string temp) {
-    char * tab2 = new char [temp.length()+1];
-    strcpy (tab2, temp.c_str());
+    char *tab2 = new char[temp.length() + 1];
+    strcpy(tab2, temp.c_str());
     return tab2;
 }
 
@@ -183,7 +182,7 @@ bool is_true(const string& value) {
 char* joinTwoStringsWithDelimiter(char* str1, const char* str2, char delimiter) {
     char* full_text = (char*)malloc(strlen(str1) + 1 + strlen(str2) + 1);
     strcpy(full_text, str1 );
-    strcat(full_text, "/");
+    strcat(full_text, &delimiter);
     strcat(full_text, str2);
     return full_text;
 }

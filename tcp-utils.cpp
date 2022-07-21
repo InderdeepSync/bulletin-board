@@ -3,6 +3,7 @@
 //
 
 #include "tcp-utils.h"
+#include <stdio.h>
 
 int connectbyport(const char* host, const char* port) {
     return connectbyportint(host,(unsigned short)atoi(port));
@@ -135,7 +136,20 @@ int readline(const int fd, char* buf, const size_t max) {
                 return recv_nodata;
             begin = 0;
         }
-        if (what == 0 || tmp == '\n') {
+        if (what == 0 || tmp == '\n' || tmp == '\r') {
+            do {
+                char temp2;
+                int next = recv_nonblock(fd, &temp2, 1, 0);
+                if (next != 1) {
+                    break;
+                }
+                if (temp2 == '\r' or temp2 == '\n') {
+                    continue;
+                }
+
+                lseek(fd, -1, SEEK_CUR);
+                break;
+            } while(true);
             buf[i] = '\0';
             return i;
         }
