@@ -168,7 +168,10 @@ void* communicateWithPeer(void* arg) {
             auto start = next(next(tokens.begin()));
             copy(start, tokens.end(),
                       ostream_iterator<string>(imploded, delim));
-            operationCompletionMessage = imploded.str();
+
+            pthread_mutex_lock(&peerCommunicationMutex);
+            operationCompletionMessage = imploded.str() + "\n";
+            pthread_mutex_unlock(&peerCommunicationMutex);
 
             notifyThreadsToUndoCommit();
             break;

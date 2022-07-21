@@ -10,13 +10,16 @@
 vector<string> tokenize(char* str, const char *delim) {
     vector<string> tokens;
 
+    char *tab2 = new char[strlen(str) + 1];
+    strcpy(tab2, str);
+
     char *saveptr;
-    char *token = strtok_r(str, delim, &saveptr);
+    char *token = strtok_r(tab2, delim, &saveptr);
     while (token != nullptr) {
         tokens.emplace_back(token);
         token = strtok_r(nullptr, delim, &saveptr);
     }
-
+    delete[] tab2;
     return tokens;
 }
 

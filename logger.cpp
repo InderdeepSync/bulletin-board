@@ -6,6 +6,8 @@
 
 bool shouldDelayOperations;
 
+pthread_mutex_t loggerMutex = PTHREAD_MUTEX_INITIALIZER;
+
 void setDebuggingPreference(bool isDelayEnabled) {
     shouldDelayOperations = isDelayEnabled;
 }
@@ -28,8 +30,11 @@ void debug_printf(const char *format, ...) {
     va_list argptr;
     va_start(argptr, format);
 
-    if (shouldDelayOperations)
+    if (shouldDelayOperations) {
+        pthread_mutex_lock(&loggerMutex);
         vprintf(format, argptr);
+        pthread_mutex_unlock(&loggerMutex);
+    }
 
     va_end(argptr);
 }
