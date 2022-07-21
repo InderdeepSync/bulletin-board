@@ -104,7 +104,7 @@ void* communicateWithPeer(void* arg) {
         response[n - 1] = '\0';
         debug_printf("Response Received from Peer %s => %s\n", peer, response);
 
-        vector<string> tokens = tokenize(string(response), " ");
+        vector<string> tokens = tokenize(response, " ");
 
         if (tokens[1] == READY and currentStatus == PRECOMMIT_SENT) {
             debug_printf("Peer %s is READY & acknowledged positively\n", peer);

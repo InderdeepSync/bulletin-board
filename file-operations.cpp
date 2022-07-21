@@ -284,7 +284,7 @@ void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string 
 }
 
 string replaceMessageInFile(const string& user, const string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace) {
-    vector<string> replaceArguments = tokenize(messageNumberAndMessage, "/");
+    vector<string> replaceArguments = tokenize(convertStringToCharArray(messageNumberAndMessage), "/");
 
     const int messageNumberToReplace = stoi(replaceArguments[0]);
     string new_message = replaceArguments[1];
@@ -321,7 +321,7 @@ pair<string, string> getMessageNumberInfo(int messageNumber) {
 
     while (readline(fileDescriptor, textLine, ALEN - 1) != recv_nodata) {
         if (l == messageNumber) {
-            vector<string> lineTokens = tokenize(string(textLine), "/");
+            vector<string> lineTokens = tokenize(textLine, "/");
 
             close(fileDescriptor);
             return make_pair(lineTokens[1], lineTokens[2]);
