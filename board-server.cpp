@@ -27,8 +27,7 @@ vector<string> peersList;
 int tmax, bulletinBoardServerPort;
 
 void handle_bulletin_board_client(int master_socket) {
-    pthread_t currentThread = pthread_self();
-    printf("New Bulletin Board Thread %lu launched.\n", currentThread);
+    printf("New Bulletin Board Thread %lu launched.\n", pthread_self());
 
     sockaddr_in client_address{}; // the address of the client...
     unsigned int client_address_len = sizeof(client_address); // ... and its length
@@ -38,7 +37,7 @@ void handle_bulletin_board_client(int master_socket) {
         int slave_socket = accept(master_socket, (struct sockaddr *) &client_address, &client_address_len);
         if (slave_socket < 0) {
             if (errno == EINTR) {
-                cout << "accept() interrupted! {Debugging Purposes}" << endl; // TODO: Clearly Examine this scenario upon cancellation/pthread_kill
+                cout << "accept() interrupted! {Debugging Purposes}" << endl;
                 return;
             }
             perror("accept");
@@ -71,7 +70,6 @@ void handle_bulletin_board_client(int master_socket) {
             } else if (tokens[0] == "QUIT") {
                 break;
             } else if (tokens[0] == "USER") {
-                // TODO: How to handle multiple USER commands during a single session??
                 if (tokens[1].find('/') != std::string::npos or trim(tokens[1]).empty()) {
                     // The name supplied by client contains '/', which isn't allowed
                     sendMessage(1.2, "ERROR USER", "The 'username' argument must be non-empty & cannot contain '/'");
@@ -80,7 +78,11 @@ void handle_bulletin_board_client(int master_socket) {
                     sendMessage(1.0, "HELLO", user.c_str());
                 }
             } else if (tokens[0] == READ) {
-                readMessageFromFile(stoi(tokens[1]), slave_socket);
+                if (not is_number(tokens[1])) {
+                    sendMessage(2.2, "ERROR READ", "Unable to parse given argument into a valid messageNumber");
+                } else {
+                    readMessageFromFile(stoi(tokens[1]), slave_socket);
+                }
             } else if (tokens[0] == WRITE or tokens[0] == REPLACE) {
                 unsigned long peersCount = peersList.size();
                 if (peersCount == 0) {
