@@ -26,9 +26,9 @@ void readMessageFromFile(int messageNumberToRead, int socketToRespond);
 
 int obtainLengthOfLineToBeReplaced(int messageNumberToReplace, int &totalBytesBeforeLineToReplace);
 
-void optimalReplaceAlgorithm(std::string newUser, int messageNumberToReplace, std::string new_message);
+void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string new_message);
 
-string replaceMessageInFile(const std::string& user, const std::string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace);
+string replaceMessageInFile(const string &user, const string &messageNumberAndMessage, bool holdLock, function<void()> &undoReplace);
 
 pair<string, string> getMessageNumberInfo(int messageNumber);
 

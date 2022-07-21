@@ -102,8 +102,11 @@ void handle_sync_server_client(int master_socket) {
                 string responseText = operationFailed ? COMMIT_UNSUCCESS : COMMIT_SUCCESS;
 
                 sendMessage(5.0, responseText.c_str(), response.c_str());
-                printf("Requested Command COMMITted to disk successfully. Response to Master => 5.0 %s %s\n", responseText.c_str(), response.c_str());
+                if (operationFailed) {
+                    break;
+                }
 
+                printf("Requested Command COMMITted to disk successfully. Response to Master => 5.0 %s %s\n", responseText.c_str(), response.c_str());
                 operationPerformed = tokens[2];
                 currentStatus = AWAITING_SUCCESS_OR_UNDO_BROADCAST;
             } else if (tokens[1] == SUCCESS_NOOP and currentStatus == AWAITING_SUCCESS_OR_UNDO_BROADCAST) {
@@ -142,7 +145,7 @@ void handle_sync_server_client(int master_socket) {
         close(slave_socket);
         pthread_cleanup_pop(0);
 
-        printf("########## Communication Channel with Peer Closed ##########\n");
+        printf("########## Communication Channel with Master Closed ##########\n");
     }
 }
 

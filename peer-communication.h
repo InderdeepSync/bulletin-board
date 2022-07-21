@@ -14,5 +14,4 @@ struct thread_info {    /* Used as argument to thread_start() */
     char *secondArgumentToOperation;
 };
 
-
 #endif //BULLETIN_BOARD_PEER_COMMUNICATION_H
