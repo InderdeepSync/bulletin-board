@@ -148,7 +148,7 @@ void* communicateWithPeer(void* arg) {
 
                     auto operationToPerform = command.find(WRITE) != string::npos ? writeOperation : replaceOperation;
                     operationCompletionMessage = operationToPerform(user, secondArgumentToOperation, false, NO_OPERATION);
-                    didMasterOperationSucceed = operationCompletionMessage.find(UNKNOWN) == string::npos;
+                    didMasterOperationSucceed = operationCompletionMessage.find(ERROR) == string::npos;
                     operationPerformedOnMaster = true;
 
                     debug_printf("Operation %s on Master\n", didMasterOperationSucceed ? "executed succeeded" : "failed to execute");

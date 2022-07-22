@@ -16,25 +16,29 @@ void cleanup_handler(void *arg );
 
 ssize_t sendMessageToSocket(float code, const char responseText[], const char additionalInfo[], int socketToSend);
 
-string createMessage(float code, const char responseText[], const char additionalInfo[], bool shouldTerminateWithNewline);
+string createMessage(float code, const char responseText[], const char additionalInfo[], bool shouldTerminateWithNewline = true);
 
 static const string bulletinBoardGreetingText = "Welcome to the Bulletin Board\n1.USER username\n2.READ msg_number\n3.WRITE text\n4.REPLACE msg_num/message\n5.QUIT exit_msg";
 
-static char* const READY = "READY";
 static char* const PRECOMMIT = "PRECOMMIT";
+static char* const READY = "READY";
+static char* const NOT_READY = "NOT_READY";
+
 static char* const COMMIT = "COMMIT";
 static char* const ABORT = "ABORT";
+
 static char* const SUCCESS_NOOP = "SUCCESS_NOOP";
 static char* const UNSUCCESS_UNDO = "UNSUCCESS_UNDO";
 
 static char* const READ = "READ";
 static char* const WRITE = "WRITE";
 static char* const REPLACE = "REPLACE";
-static char* const UNKNOWN = "UNKNOWN";
+
 static char* const COMMIT_SUCCESS = "COMMIT_SUCCESS";
 static char* const COMMIT_UNSUCCESS = "COMMIT_UNSUCCESS";
 
-static char* const MASTER = "MASTER";
+static char* const ERROR = "ERROR";
+static char* const UNKNOWN = "UNKNOWN";
 
 static function<void()> NO_OPERATION = [](){};
 

@@ -289,6 +289,29 @@ void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string 
     }
 }
 
+pair<bool, string> areReplaceArgumentsValid(const string &messageNumberAndMessage) {
+    vector<string> replaceArguments = tokenize(convertStringToCharArray(messageNumberAndMessage), "/");
+    bool areArgumemntsInvalid = replaceArguments.size() != 2 or not is_number(replaceArguments[0]) or
+                                replaceArguments[1].empty() or count(messageNumberAndMessage.begin(), messageNumberAndMessage.end(), '/') != 1;
+
+    bool areArgsValid = true; string errorText;
+    if (areArgumemntsInvalid) {
+        areArgsValid = false;
+        errorText = createMessage(3.2, "ERROR WRITE", "Incorrect format. Argument must be of the form msgNum/message.");
+    } else {
+        const int messageNumberToReplace = stoi(replaceArguments[0]);
+
+        pthread_mutex_lock(&mut);
+        if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
+            areArgsValid = false;
+            errorText = createMessage(3.1, "UNKNOWN", to_string(messageNumberToReplace).c_str());
+        }
+        pthread_mutex_unlock(&mut);
+    }
+
+    return make_pair(areArgsValid, errorText);
+}
+
 string replaceOperation(const string& user, const string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace) {
     if (access(bulletinBoardFile.c_str(), R_OK | W_OK) != 0) {
         return createMessage(3.2, "ERROR WRITE", "bbfile is currently unavailable", !holdLock);
@@ -298,10 +321,6 @@ string replaceOperation(const string& user, const string& messageNumberAndMessag
     vector<string> replaceArguments = tokenize(convertStringToCharArray(messageNumberAndMessage), "/");
     const int messageNumberToReplace = stoi(replaceArguments[0]);
     string new_message = replaceArguments[1];
-
-    if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
-        return createMessage(3.1, "UNKNOWN", to_string(messageNumberToReplace).c_str(), !holdLock);
-    }
 
     auto messageInfo = getMessageNumberInfo(messageNumberToReplace);
     string oldUser = messageInfo.first;

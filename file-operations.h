@@ -28,6 +28,8 @@ int obtainLengthOfLineToBeReplaced(int messageNumberToReplace, int &totalBytesBe
 
 void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string new_message);
 
+pair<bool, string> areReplaceArgumentsValid(const string &messageNumberAndMessage);
+
 string replaceOperation(const string &user, const string &messageNumberAndMessage, bool holdLock, function<void()> &undoReplace);
 
 pair<string, string> getMessageNumberInfo(int messageNumber);
