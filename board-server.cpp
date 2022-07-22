@@ -59,7 +59,8 @@ void handle_bulletin_board_client(int master_socket) {
 
         string user = "nobody";
 
-        while ((n = readline(slave_socket, req, ALEN - 1)) != recv_nodata) {
+        char residue = '\0';
+        while ((n = readlineFromSocket(slave_socket, req, ALEN - 1, residue)) != recv_nodata) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, nullptr);
 
             cout << "Command Received from Client: " << req << endl;

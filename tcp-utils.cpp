@@ -122,11 +122,16 @@ int recv_nonblock (const int sd, char* buf, const size_t max, const int timeout)
     return recv(sd,buf,max,0);
 }
 
-int readline(const int fd, char* buf, const size_t max) {
-    size_t i;
-    int begin = 1;
+int readlineFromSocket(const int fd, char* buf, const size_t max, char &residue) {
+    size_t i = 0;
+    bool begin = true;
 
-    for (i = 0; i < max; i++) {
+    if (residue != '\0') {
+        buf[i++] = residue;
+        residue = '\0';
+    }
+
+    for (; i < max; i++) {
         char tmp;
         int what = read(fd,&tmp,1);
         if (what == -1)
@@ -134,7 +139,7 @@ int readline(const int fd, char* buf, const size_t max) {
         if (begin) {
             if (what == 0)
                 return recv_nodata;
-            begin = 0;
+            begin = false;
         }
         if (what == 0 || tmp == '\n' || tmp == '\r') {
             do {
@@ -147,7 +152,7 @@ int readline(const int fd, char* buf, const size_t max) {
                     continue;
                 }
 
-                lseek(fd, -1, SEEK_CUR);
+                residue = temp2;
                 break;
             } while(true);
             buf[i] = '\0';
