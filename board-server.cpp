@@ -96,14 +96,12 @@ void handle_bulletin_board_client(int master_socket) {
                 unsigned long peersCount = peersList.size();
                 if (peersCount == 0) {
                     auto operation = tokens[0] == WRITE ? writeOperation : replaceOperation;
-                    string response = operation(user, tokens[1], false, NO_OPERATION);
+                    string response = operation(user, tokens[1], false, ref_ignore<function<void()>>);
                     send(slave_socket, response.c_str(), response.size(), 0);
                 } else {
-                    vector<pthread_t> peerThreads;
-
                     struct thread_info *tinfo = (thread_info*) calloc(peersCount, sizeof(*tinfo));
                     resetPeerCommunicationGlobalVars(peersCount);
-                    for (int i = 0; i < peersCount; i++ ) {
+                    for (int i = 0; i < peersCount; i++) {
                         string peer = peersList.at(i);
                         printf("Creating thread to communicate with %s\n", peer.c_str());
 
@@ -112,26 +110,22 @@ void handle_bulletin_board_client(int master_socket) {
                         tinfo[i].req = req;
                         tinfo[i].secondArgumentToOperation = convertStringToCharArray(tokens[1]);
 
-                        pthread_t tt;
-                        if (pthread_create(&tt, nullptr, &communicateWithPeer, &tinfo[i]) != 0) {
+                        if (pthread_create(&tinfo[i].thread_id, nullptr, &communicateWithPeer, &tinfo[i]) != 0) {
                             perror("pthread_create");
                         }
-                        peerThreads.push_back(tt);
                     }
 
-                    void* operationResponse;
-                    for (pthread_t peerThread: peerThreads) {
-                        pthread_join(peerThread, &operationResponse);
+                    for (int i = 0; i < peersCount; i++) {
+                        pthread_join(tinfo[i].thread_id, nullptr);
                     }
                     free(tinfo);
-                    char* response = (char*)operationResponse;
 
-                    if (strlen(response) == 0) {
-                        sendMessage(3.2, joinTwoStringsWithDelimiter("ERROR", tokens[0].c_str(), ' '), "Syncronization Failed");
+                    string response = getMasterOperationCompletionMessage();
+                    if (response.empty()) {
+                        sendMessage(3.2, joinTwoStringsWithDelimiter(ERROR, tokens[0].c_str(), ' '), "Syncronization Failed");
                     } else {
-                        send(slave_socket, response, strlen(response), 0);
+                        send(slave_socket, response.c_str(), response.length(), 0);
                     }
-                    free(operationResponse);
                 }
             } else {
                 sendMessage(0.0, "ERROR", "Invalid Command Entered!");

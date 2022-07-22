@@ -22,7 +22,6 @@ static const string bulletinBoardGreetingText = "Welcome to the Bulletin Board\n
 
 static char* const PRECOMMIT = "PRECOMMIT";
 static char* const READY = "READY";
-static char* const NOT_READY = "NOT_READY";
 
 static char* const COMMIT = "COMMIT";
 static char* const ABORT = "ABORT";
@@ -39,8 +38,6 @@ static char* const COMMIT_UNSUCCESS = "COMMIT_UNSUCCESS";
 
 static char* const ERROR = "ERROR";
 static char* const UNKNOWN = "UNKNOWN";
-
-static function<void()> NO_OPERATION = [](){};
 
 std::string trim(const std::string &s);
 
