@@ -23,8 +23,19 @@ enum SyncMasterServerStatus {
 };
 
 unsigned long numberOfPositivePrecommitAcknowledgementsPending; bool shouldAbort = false;
-unsigned long numberOfSuccessfulCommitAcknowledgementsPending; bool shouldUndoCommit = false;
-bool operationPerformedOnMaster = false, didMasterOperationSucceed = false; string operationCompletionMessage;
+unsigned long numberOfSuccessfulCommitAcknowledgementsPending; bool didOneOrMorePeersFailToCommit = false; //TODO: Check detach state of all pthread_create calls
+string masterOperationCompletionMessage; // TODO: Ensure all global vars in all modules are accessed in a protected manner
+
+void resetPeerCommunicationGlobalVars(unsigned long numberOfPeers) {
+    numberOfPositivePrecommitAcknowledgementsPending = numberOfSuccessfulCommitAcknowledgementsPending = numberOfPeers;
+    shouldAbort = didOneOrMorePeersFailToCommit = false;
+
+    masterOperationCompletionMessage.clear();
+}
+
+string getMasterOperationCompletionMessage() {
+    return masterOperationCompletionMessage;
+}
 
 pthread_mutex_t peerCommunicationMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t peerCommunicationCondition = PTHREAD_COND_INITIALIZER;
@@ -40,8 +51,8 @@ void notifyThreadsToAbort() {
 
 void notifyThreadsToUndoCommit() {
     pthread_mutex_lock(&peerCommunicationMutex);
-    if (!shouldUndoCommit) {
-        shouldUndoCommit = true;
+    if (!didOneOrMorePeersFailToCommit) {
+        didOneOrMorePeersFailToCommit = true;
         pthread_cond_broadcast(&peerCommunicationCondition);
     }
     pthread_mutex_unlock(&peerCommunicationMutex);
@@ -76,7 +87,7 @@ void* communicateWithPeer(void* arg) {
     int socketId = createSocket(peerHost, peerPort);
     if (socketId == -1) {
         notifyThreadsToAbort();
-        return convertStringToCharArray(operationCompletionMessage);
+        return nullptr;
     }
 
     auto sendMessage = [&](float code, const char responseText[], const char additionalInfo[]) {
@@ -111,7 +122,7 @@ void* communicateWithPeer(void* arg) {
                 pthread_cond_broadcast(&peerCommunicationCondition);
             } else {
                 while(numberOfPositivePrecommitAcknowledgementsPending > 0 and not shouldAbort) {
-                    debug_printf("Waiting for response/timeout from other peers.\n");
+                    debug_printf("Peer %s now waiting for response/timeout from other peers.\n", peer);
                     pthread_cond_wait(&peerCommunicationCondition, &peerCommunicationMutex);
                 }
             }
@@ -134,45 +145,35 @@ void* communicateWithPeer(void* arg) {
             if (--numberOfSuccessfulCommitAcknowledgementsPending == 0) {
                 pthread_cond_broadcast(&peerCommunicationCondition);
             } else {
-                while(numberOfSuccessfulCommitAcknowledgementsPending > 0 and not shouldUndoCommit) {
+                while(numberOfSuccessfulCommitAcknowledgementsPending > 0 and not didOneOrMorePeersFailToCommit) {
                     debug_printf("Waiting for positive/negative acknowledgement for COMMIT or timeout from other peers.\n");
                     pthread_cond_wait(&peerCommunicationCondition, &peerCommunicationMutex);
                 }
             }
             pthread_mutex_unlock(&peerCommunicationMutex);
 
-            if (!shouldUndoCommit) {
+            if (not didOneOrMorePeersFailToCommit) {
                 pthread_mutex_lock(&peerCommunicationMutex);
-                if (!operationPerformedOnMaster) {
+                if (masterOperationCompletionMessage.empty()) {
                     debug_printf("Received COMMIT_SUCCESS from all peers. Performing Operation on Master Node\n");
 
                     auto operationToPerform = command.find(WRITE) != string::npos ? writeOperation : replaceOperation;
-                    operationCompletionMessage = operationToPerform(user, secondArgumentToOperation, false, NO_OPERATION);
-                    didMasterOperationSucceed = operationCompletionMessage.find(ERROR) == string::npos;
-                    operationPerformedOnMaster = true;
+                    masterOperationCompletionMessage = operationToPerform(user, secondArgumentToOperation, false, ref_ignore<function<void()>>);
 
-                    debug_printf("Operation %s on Master\n", didMasterOperationSucceed ? "executed succeeded" : "failed to execute");
+                    debug_printf("Local Master Operation Completion Message => %s\n", masterOperationCompletionMessage.c_str());
                 }
                 pthread_mutex_unlock(&peerCommunicationMutex);
             }
-            char* messageToSend = !shouldUndoCommit and didMasterOperationSucceed ? SUCCESS_NOOP: UNSUCCESS_UNDO;
-            debug_printf("Transmitting latest transaction status %s to peer %s\n", messageToSend, peer);
+            bool didMasterOperationSucceed = masterOperationCompletionMessage.find(ERROR) == string::npos;
+            bool shouldUndoCommit = didOneOrMorePeersFailToCommit or not didMasterOperationSucceed;
+            char* messageToSend = shouldUndoCommit ? UNSUCCESS_UNDO : SUCCESS_NOOP;
+
+            debug_printf("Transmitting latest local operation status %s to peer %s\n", messageToSend, peer);
             sendMessage(5.0, messageToSend, "");
 
             break;
         } else if (tokens[1] == COMMIT_UNSUCCESS and currentStatus == COMMIT_SENT) {
             debug_printf("Peer %s negatively acknowledged the COMMIT\n", peer);
-
-            const char* const delim = " ";
-            ostringstream imploded;
-
-            auto start = next(next(tokens.begin()));
-            copy(start, tokens.end(),
-                      ostream_iterator<string>(imploded, delim));
-
-            pthread_mutex_lock(&peerCommunicationMutex);
-            operationCompletionMessage = imploded.str() + "\n";
-            pthread_mutex_unlock(&peerCommunicationMutex);
 
             notifyThreadsToUndoCommit();
             break;
@@ -193,15 +194,5 @@ void* communicateWithPeer(void* arg) {
 
     shutdown(socketId, SHUT_RDWR);
     close(socketId);
-    printf("######### 2PC Protocol concluded. Connection with %s closed. #########\n", peer);
-
-    pthread_exit(convertStringToCharArray(operationCompletionMessage));
-}
-
-void resetPeerCommunicationGlobalVars(unsigned long numberOfPeers) {
-    numberOfPositivePrecommitAcknowledgementsPending = numberOfSuccessfulCommitAcknowledgementsPending = numberOfPeers;
-    shouldAbort = shouldUndoCommit = false;
-
-    operationPerformedOnMaster = didMasterOperationSucceed = false;
-    operationCompletionMessage.clear();
+    printf("######### Connection with %s closed. #########\n", peer);
 }
