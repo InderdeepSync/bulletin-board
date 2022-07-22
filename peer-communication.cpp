@@ -168,7 +168,7 @@ void* communicateWithPeer(void* arg) {
             bool shouldUndoCommit = didOneOrMorePeersFailToCommit or not didMasterOperationSucceed;
             char* messageToSend = shouldUndoCommit ? UNSUCCESS_UNDO : SUCCESS_NOOP;
 
-            debug_printf("Transmitting latest local operation status %s to peer %s\n", messageToSend, peer);
+            debug_printf("Transmitting latest local operation status %s to peer %s", messageToSend, peer);
             sendMessage(5.0, messageToSend, "");
 
             break;

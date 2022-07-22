@@ -193,3 +193,7 @@ bool is_number(const std::string& s) {
     return !s.empty() && it == s.end();
 }
 
+int readline(const int fd, char* buf, const size_t max) {
+    return readlineFromSocket(fd, buf, max, ref_ignore<char>);
+}
+

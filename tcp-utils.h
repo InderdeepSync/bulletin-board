@@ -119,17 +119,6 @@ const int recv_nodata = -2;
  */
 int recv_nonblock (const int, char*, const size_t, const int);
 
-/*
- * readline(fd,buf,max) reads a ('\n'-terminated) line from device fd
- * and puts the result in buf.  Does not read more than max
- * bytes. Returns the number of bytes actually read, recv_nodata when
- * no data is available, or -1 on error.  This is a general function
- * but can be of course used with sockets too.
- *
- * Note: the function will return 0 when an empty line is encountered,
- * so a return of 0 is no longer an indication that the end of the
- * file has been reached (check for a recv_nodata return instead).
- */
-int readline(const int, char*, const size_t);
+int readlineFromSocket(const int fd, char* buf, const size_t max, char &residue);
 
 #endif //BULLETIN_BOARD_TCP_UTILS_H

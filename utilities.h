@@ -59,6 +59,8 @@ char* joinTwoStringsWithDelimiter(char* str1, const char* str2, char delimiter);
 
 bool is_number(const std::string& s);
 
+int readline(const int fd, char* buf, const size_t max);
+
 static const string CONFIGURATION_FILE_BBFILE_KEY = "BBFILE";
 
 static const string CONFIGURATION_FILE_DEBUG_KEY = "DEBUG";
