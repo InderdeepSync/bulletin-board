@@ -95,7 +95,7 @@ void handle_sync_server_client(int master_socket) {
                 printf("Aborting Transaction. No further action needed.\n");
                 break;
             } else if (tokens[1] == COMMIT and currentStatus == PRECOMMIT_ACKNOWLEDGED) {
-                auto operation = tokens[2] == WRITE ? writeOperation : replaceMessageInFile;
+                auto operation = tokens[2] == WRITE ? writeOperation : replaceOperation;
                 string response = operation(user, tokens[3], true, undoCommitOperation);
 
                 bool operationFailed = response.find(UNKNOWN) != string::npos; // TODO: when should the operation be considered a failure?

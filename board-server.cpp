@@ -84,9 +84,20 @@ void handle_bulletin_board_client(int master_socket) {
                     readMessageFromFile(stoi(tokens[1]), slave_socket);
                 }
             } else if (tokens[0] == WRITE or tokens[0] == REPLACE) {
+                if (tokens[0] == REPLACE) {
+                    vector<string> replaceArguments = tokenize(convertStringToCharArray(tokens[1]), "/");
+                    bool areArgumemntsInvalid = replaceArguments.size() != 2 or not is_number(replaceArguments[0]) or
+                                                replaceArguments[1].empty() or count(tokens[1].begin(), tokens[1].end(), '/') != 1;
+
+                    if (areArgumemntsInvalid) {
+                         sendMessage(3.2, "ERROR WRITE", "Incorrect format. Argument must be of the form msgNum/message.");
+                         continue;
+                    }
+                }
+
                 unsigned long peersCount = peersList.size();
                 if (peersCount == 0) {
-                    auto operation = tokens[0] == WRITE ? writeOperation : replaceMessageInFile;
+                    auto operation = tokens[0] == WRITE ? writeOperation : replaceOperation;
                     string response = operation(user, tokens[1], false, NO_OPERATION);
                     send(slave_socket, response.c_str(), response.size(), 0);
                 } else {

@@ -73,8 +73,6 @@ void* communicateWithPeer(void* arg) {
     string command = tinfo->req;
     string secondArgumentToOperation = tinfo->secondArgumentToOperation;
 
-    auto operationToPerform = command.find(WRITE) != string::npos ? writeOperation : replaceMessageInFile;
-
     int socketId = createSocket(peerHost, peerPort);
     if (socketId == -1) {
         notifyThreadsToAbort();
@@ -147,9 +145,12 @@ void* communicateWithPeer(void* arg) {
                 pthread_mutex_lock(&peerCommunicationMutex);
                 if (!operationPerformedOnMaster) {
                     debug_printf("Received COMMIT_SUCCESS from all peers. Performing Operation on Master Node\n");
+
+                    auto operationToPerform = command.find(WRITE) != string::npos ? writeOperation : replaceOperation;
                     operationCompletionMessage = operationToPerform(user, secondArgumentToOperation, false, NO_OPERATION);
                     didMasterOperationSucceed = operationCompletionMessage.find(UNKNOWN) == string::npos;
                     operationPerformedOnMaster = true;
+
                     debug_printf("Operation %s on Master\n", didMasterOperationSucceed ? "executed succeeded" : "failed to execute");
                 }
                 pthread_mutex_unlock(&peerCommunicationMutex);
