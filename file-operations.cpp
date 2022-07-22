@@ -289,42 +289,35 @@ void optimalReplaceAlgorithm(string newUser, int messageNumberToReplace, string 
     }
 }
 
-string replaceMessageInFile(const string& user, const string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace) {
-    vector<string> replaceArguments = tokenize(convertStringToCharArray(messageNumberAndMessage), "/");
-    bool areArgumemntsInvalid = replaceArguments.size() != 2 or not is_number(replaceArguments[0]) or
-            replaceArguments[1].empty() or count(messageNumberAndMessage.begin(), messageNumberAndMessage.end(), '/') != 1;
-
-    if (areArgumemntsInvalid) {
-        return createMessage(3.2, "ERROR WRITE", "Incorrect format. Argument must be of the form msgNum/message.", !holdLock);
+string replaceOperation(const string& user, const string& messageNumberAndMessage, bool holdLock, function<void()> &undoReplace) {
+    if (access(bulletinBoardFile.c_str(), R_OK | W_OK) != 0) {
+        return createMessage(3.2, "ERROR WRITE", "bbfile is currently unavailable", !holdLock);
     }
+    acquireWriteLock("REPLACE");
 
+    vector<string> replaceArguments = tokenize(convertStringToCharArray(messageNumberAndMessage), "/");
     const int messageNumberToReplace = stoi(replaceArguments[0]);
     string new_message = replaceArguments[1];
 
     if (messageNumberToReplace >= message_number or messageNumberToReplace < 0) {
         return createMessage(3.1, "UNKNOWN", to_string(messageNumberToReplace).c_str(), !holdLock);
-    } else {
-        if (access(bulletinBoardFile.c_str(), R_OK | W_OK) != 0) {
-            return createMessage(3.2, "ERROR WRITE", "bbfile is currently unavailable", !holdLock);
-        }
-        acquireWriteLock("REPLACE");
-
-        auto messageInfo = getMessageNumberInfo(messageNumberToReplace);
-        string oldUser = messageInfo.first;
-        string oldMessage = messageInfo.second;
-        undoReplace = [oldUser, messageNumberToReplace, oldMessage](){
-            optimalReplaceAlgorithm(oldUser, messageNumberToReplace, oldMessage);
-            debug_printf("UNDO: bbfile has been reset to previous state before COMMIT REPLACE\n");
-        };
-
-        optimalReplaceAlgorithm(user, messageNumberToReplace, new_message);
-        string response = createMessage(3.0, "WROTE", to_string(messageNumberToReplace).c_str(), !holdLock);
-
-        if (!holdLock) {
-            releaseWriteLock("REPLACE");
-        }
-        return response;
     }
+
+    auto messageInfo = getMessageNumberInfo(messageNumberToReplace);
+    string oldUser = messageInfo.first;
+    string oldMessage = messageInfo.second;
+    undoReplace = [oldUser, messageNumberToReplace, oldMessage](){
+        optimalReplaceAlgorithm(oldUser, messageNumberToReplace, oldMessage);
+        debug_printf("UNDO: bbfile has been reset to previous state before COMMIT REPLACE\n");
+    };
+
+    optimalReplaceAlgorithm(user, messageNumberToReplace, new_message);
+    string response = createMessage(3.0, "WROTE", to_string(messageNumberToReplace).c_str(), !holdLock);
+
+    if (!holdLock) {
+        releaseWriteLock("REPLACE");
+    }
+    return response;
 }
 
 pair<string, string> getMessageNumberInfo(int messageNumber) {
