@@ -98,7 +98,7 @@ void handle_sync_server_client(int master_socket) {
                 auto operation = tokens[2] == WRITE ? writeOperation : replaceOperation;
                 string response = operation(user, tokens[3], true, undoCommitOperation);
 
-                bool operationFailed = response.find(UNKNOWN) != string::npos; // TODO: when should the operation be considered a failure?
+                bool operationFailed = response.find(ERROR) != string::npos;
                 string responseText = operationFailed ? COMMIT_UNSUCCESS : COMMIT_SUCCESS;
 
                 sendMessage(5.0, responseText.c_str(), response.c_str());
