@@ -46,9 +46,16 @@ NOTE: There is no scenario where the slave peer consciously responds NOT_READY.
 5.
     i. It takes too long for master to send either ABORT or COMMIT message to peer after receiving READY acknowledgement.
        Peer assumes something is wrong, times out and closes connection.
-    ii. What happens to master then??
+    ii. At some point in the future, master would send() either ABORT or COMMIT to the peer. This system call would fail with return value -1, though we do not check.
+        a) If the message the master was attempting to send to the peer was ABORT, we close our side of the connection. There is nothing more to do.
+        b) Otherwise, we attempt to optimistically block again on recv_block, hoping to get a response (either COMMIT_SUCCESS or COMMIT_UNSUCCESS).
+        However, we soon realize that the connection has been closed by the other side. We simply notify other threads of this, so that COMMIT_UNSUCCESS may be sent to other peers that have performed the operation.
+
 
 6.
-    i. It takes too long for master to send either SUCCESS_NOOP or UNSUCCESS_UNDO message to peer after receiving COMMIT_SUCCESS acknowledgement.
-       Peer times out, assumes something is wrong, undoes operation, releases lock and closes connection. [sleep(3) after sendMessage(COMMIT)]
-    ii. What happens to master then??
+    i. It takes too long for the master to send either SUCCESS_NOOP or UNSUCCESS_UNDO message to peer after receiving COMMIT_SUCCESS acknowledgement.
+       Peer times out, assumes something is wrong, undoes operation, releases lock and closes connection.
+    ii. At some point in the future, master would attempt to send() either SUCCESS_NOOP or UNSUCCESS_UNDO to peer. This system call would fail with return value -1, though we do not check.
+    In The two-phase protocol, the master does not confirm the receipt of these messages from the peers. Hence, there is nothing else to do but termminate the thread communicating with the peer.
+
+    NOTE: There is a possibility that the peer, having timed out, doesn't receive the late SUCCESS_NOOP sent by master, and undoes an operation that it should not have. The three-phase commit overcomes this weakness.
