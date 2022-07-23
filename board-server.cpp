@@ -26,6 +26,12 @@ long int bulletinBoardMasterSocket;
 vector<string> peersList;
 int tmax, bulletinBoardServerPort;
 
+int initializeBoardServerGlobalVars(int port, int maxThreads, vector<string> peers) {
+    bulletinBoardServerPort = port;
+    tmax = maxThreads;
+    peersList = peers;
+}
+
 void* handle_bulletin_board_client(void* arg) {
     pthread_t threadId = pthread_self();
     printf("New Bulletin Board Thread %lu launched.\n", threadId);
@@ -163,24 +169,11 @@ void terminateBulletinBoardThreadsAndCloseMasterSocket() {
     cout << "All BulletinBoard Server Threads terminated." << endl;
 }
 
-void reconfigureGlobalVariablesAndRestartBoardServer(string configurationFile) {
+void reconfigureBoardServerGlobalVars(string configurationFile) {
     vector<string> newPeersList;
 
     readConfigurationParametersFromFile(configurationFile, tmax, bulletinBoardServerPort, ref_ignore<int>, ref_ignore<string>, newPeersList, ref_ignore<bool>, ref_ignore<bool>);
     if (!newPeersList.empty()) {
         peersList = newPeersList;
     }
-
-    startBulletinBoardServer();
 }
-
-int board_server(int port, int maxThreads, vector<string> peers) {
-    bulletinBoardServerPort = port;
-    tmax = maxThreads;
-    peersList = peers;
-
-    startBulletinBoardServer();
-}
-
-
-
