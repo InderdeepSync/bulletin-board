@@ -25,6 +25,10 @@ long int syncronizationMasterSocket;
 const int NUMBER_OF_SYNCRONIZATION_THREADS = 1;
 int syncServerPort;
 
+void setSyncServerPort(int portToSet) {
+    syncServerPort = portToSet;
+}
+
 enum SyncSlaveServerStatus {
     IDLE, PRECOMMIT_ACKNOWLEDGED, AWAITING_SUCCESS_OR_UNDO_BROADCAST
 };
@@ -159,15 +163,6 @@ void terminateSyncronizationThreadsAndCloseMasterSocket() {
     cout << "All Syncronization Server Threads terminated." << endl;
 }
 
-void reconfigureGlobalVariablesAndRestartSyncServer(string configurationFile) {
+void reconfigureSyncServerPort(string configurationFile) {
     syncServerPort = stoi(readKeyFromConfigurationFile(CONFIGURATION_FILE_SYNCPORT_KEY, configurationFile, to_string(syncServerPort)));
-
-    startSyncServer();
 }
-
-int sync_server(int port) {
-    syncServerPort = port;
-
-    startSyncServer();
-}
-

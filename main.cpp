@@ -33,8 +33,11 @@ void super_sighup_handler(int signum) {
     string bbfileNew = readKeyFromConfigurationFile(CONFIGURATION_FILE_BBFILE_KEY, configurationFile, getBulletinBoardFile());
     setBulletinBoardFile(bbfileNew);
 
-    reconfigureGlobalVariablesAndRestartBoardServer(configurationFile);
-    reconfigureGlobalVariablesAndRestartSyncServer(configurationFile);
+    reconfigureBoardServerGlobalVars(configurationFile);
+    startBulletinBoardServer();
+
+    reconfigureSyncServerPort(configurationFile);
+    startSyncServer();
 
     cout << "Reconfiguration Successful. Normal Operation Resumed!" << endl;
 }
@@ -170,8 +173,11 @@ int main(int argc, char **argv, char *envp[]) {
         peers.emplace_back(string(argv[i + optind]));
     }
 
-    board_server(bulletinBoardServerPort, tmax, peers);
-    sync_server(syncServerPort);
+    initializeBoardServerGlobalVars(bulletinBoardServerPort, tmax, peers);
+    startBulletinBoardServer();
+
+    setSyncServerPort(syncServerPort);
+    startSyncServer();
 
     signal(SIGHUP, super_sighup_handler); // kill -HUP <Process ID>
     signal(SIGINT, super_sigquit_handler); // kill -INT <Process ID> or Ctrl + C
