@@ -77,7 +77,9 @@ void *writer(int param) {
 ***********************************************************************************************************
 Apart from the above (from the previous assignment), consider the following:
 
-
+1. We allow the client to change their username mid-session by sending the USER command multiple times in a single session.
+By default, if no USER comand has been issued, the default name 'nobody' is assumed(Akin to browsing an application as a guest user).
+Subsequent commands issued will take into account the latest username assumed by the client at the time.
 2. Both accept() and read() are guaranteed cancellation points, hence pthread_cancel() is sufficient to cancel without much concern. However, in order to deallocate resources, a cleanup_handler is installed
 that closes the socket when an active thread is cancelled[using pthread_cleanup_push and pthread_cleanup_pop]. This handler is not invoked under normal thread lifecycle.
 
