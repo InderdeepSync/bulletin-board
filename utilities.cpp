@@ -180,11 +180,9 @@ bool is_true(const string& value) {
 };
 
 char* joinTwoStringsWithDelimiter(char* str1, const char* str2, char delimiter) {
-    char* full_text = (char*)malloc(strlen(str1) + 1 + strlen(str2) + 1);
-    strcpy(full_text, str1 );
-    strcat(full_text, &delimiter);
-    strcat(full_text, str2);
-    return full_text;
+    char* buffer = (char*)malloc(strlen(str1) + 1 + strlen(str2) + 1);
+    snprintf(buffer, 255, "%s%c%s", str1, delimiter, str2);
+    return buffer;
 }
 
 bool is_number(const std::string& s) {
