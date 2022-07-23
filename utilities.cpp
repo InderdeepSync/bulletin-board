@@ -118,14 +118,11 @@ void killThreads(vector<pthread_t> &threadsToKill) {
     threadsToKill.clear();
 }
 
-int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handlerArgument, vector<pthread_t> &threadsCollection) {
+int createThreads(int numberOfThreads, void* (*serverHandler)(void*), vector<pthread_t> &threadsCollection) {
     pthread_t tt;
-    pthread_attr_t ta;
-    pthread_attr_init(&ta);
-    pthread_attr_setdetachstate(&ta, PTHREAD_CREATE_JOINABLE);
 
     for (int i = 0; i < numberOfThreads; i++) {
-        if (pthread_create(&tt, &ta, (void*(*)(void*))serverHandler, handlerArgument) != 0) {
+        if (pthread_create(&tt, nullptr, serverHandler, nullptr) != 0) {
             perror("pthread_create");
             return 1;
         }

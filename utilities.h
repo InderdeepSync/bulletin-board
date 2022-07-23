@@ -51,7 +51,7 @@ void readConfigurationParametersFromFile(const string& configurationFile, int &t
 
 void killThreads(vector<pthread_t> &threadsToKill);
 
-int createThreads(int numberOfThreads, void (*serverHandler)(int), void* handlerArgument, vector<pthread_t> &threadsCollection);
+int createThreads(int numberOfThreads, void* (*serverHandler)(void*), vector<pthread_t> &threadsCollection);
 
 string readKeyFromConfigurationFile(string keyToRead, string configurationFile, string defaultValue);
 

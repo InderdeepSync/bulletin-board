@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdio>
 #include <pthread.h>
+#include <functional>
 
 using namespace std;
 

@@ -26,7 +26,7 @@ long int bulletinBoardMasterSocket;
 vector<string> peersList;
 int tmax, bulletinBoardServerPort;
 
-void handle_bulletin_board_client(int master_socket) {
+void* handle_bulletin_board_client(void* arg) {
     pthread_t threadId = pthread_self();
     printf("New Bulletin Board Thread %lu launched.\n", threadId);
 
@@ -35,14 +35,14 @@ void handle_bulletin_board_client(int master_socket) {
 
     while (true) {
         pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
-        int slave_socket = accept(master_socket, (struct sockaddr *) &client_address, &client_address_len);
+        int slave_socket = accept(bulletinBoardMasterSocket, (struct sockaddr *) &client_address, &client_address_len);
         if (slave_socket < 0) {
             if (errno == EINTR) {
                 cout << "accept() interrupted! {Debugging Purposes}" << endl;
-                return;
+                return nullptr;
             }
             perror("accept");
-            return;
+            return nullptr;
         }
         pthread_cleanup_push(cleanup_handler, &slave_socket);
 
@@ -154,7 +154,7 @@ void startBulletinBoardServer() {
     bulletinBoardMasterSocket = createMasterSocket(bulletinBoardServerPort);
     printf("Bulletin Board Server up and listening on port %d.\n", bulletinBoardServerPort);
 
-    createThreads(tmax, &handle_bulletin_board_client, (void*)bulletinBoardMasterSocket, bulletinBoardServerThreads);
+    createThreads(tmax, &handle_bulletin_board_client, bulletinBoardServerThreads);
 }
 
 void terminateBulletinBoardThreadsAndCloseMasterSocket() {
