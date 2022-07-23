@@ -29,7 +29,7 @@ enum SyncSlaveServerStatus {
     IDLE, PRECOMMIT_ACKNOWLEDGED, AWAITING_SUCCESS_OR_UNDO_BROADCAST
 };
 
-void handle_sync_server_client(int master_socket) {
+void* handle_sync_server_client(void* arg) {
     printf("New Syncronization Thread %lu launched.\n", pthread_self());
 
     sockaddr_in client_address{}; // the address of the client...
@@ -37,14 +37,14 @@ void handle_sync_server_client(int master_socket) {
 
     while (true) {
         pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, nullptr);
-        int slave_socket = accept(master_socket, (struct sockaddr *) &client_address, &client_address_len);
+        int slave_socket = accept(syncronizationMasterSocket, (struct sockaddr *) &client_address, &client_address_len);
         if (slave_socket < 0) {
             if (errno == EINTR) {
                 cout << "accept() interrupted! {Debugging Purposes}" << endl;
-                return;
+                return nullptr;
             }
             perror("accept");
-            return;
+            return nullptr;
         }
         pthread_cleanup_push(cleanup_handler, &slave_socket);
 
@@ -147,10 +147,10 @@ void handle_sync_server_client(int master_socket) {
 }
 
 void startSyncServer() {
-    syncronizationMasterSocket = createMasterSocket(syncServerPort); //TODO: Directly obtain masterSocket from global var instead of passing redundant argument
+    syncronizationMasterSocket = createMasterSocket(syncServerPort);
     printf("Syncronization Server up and listening on port %d.\n", syncServerPort);
 
-    createThreads(NUMBER_OF_SYNCRONIZATION_THREADS, &handle_sync_server_client, (void*)syncronizationMasterSocket, syncServerThreads);
+    createThreads(NUMBER_OF_SYNCRONIZATION_THREADS, &handle_sync_server_client, syncServerThreads);
 }
 
 void terminateSyncronizationThreadsAndCloseMasterSocket() {
