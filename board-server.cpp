@@ -27,7 +27,8 @@ vector<string> peersList;
 int tmax, bulletinBoardServerPort;
 
 void handle_bulletin_board_client(int master_socket) {
-    printf("New Bulletin Board Thread %lu launched.\n", pthread_self());
+    pthread_t threadId = pthread_self();
+    printf("New Bulletin Board Thread %lu launched.\n", threadId);
 
     sockaddr_in client_address{}; // the address of the client...
     unsigned int client_address_len = sizeof(client_address); // ... and its length
@@ -101,7 +102,7 @@ void handle_bulletin_board_client(int master_socket) {
                     send(slave_socket, response.c_str(), response.size(), 0);
                 } else {
                     struct thread_info *tinfo = (thread_info*) calloc(peersCount, sizeof(*tinfo));
-                    resetPeerCommunicationGlobalVars(peersCount);
+                    resetPeerCommunicationGlobalVars(threadId, peersCount);
                     for (int i = 0; i < peersCount; i++) {
                         string peer = peersList.at(i);
                         printf("Creating thread to communicate with %s\n", peer.c_str());
@@ -110,6 +111,7 @@ void handle_bulletin_board_client(int master_socket) {
                         tinfo[i].user = convertStringToCharArray(user);
                         tinfo[i].req = req;
                         tinfo[i].secondArgumentToOperation = convertStringToCharArray(tokens[1]);
+                        tinfo[i].controller_thread_id = threadId;
 
                         if (pthread_create(&tinfo[i].thread_id, nullptr, &communicateWithPeer, &tinfo[i]) != 0) {
                             perror("pthread_create");
@@ -121,7 +123,7 @@ void handle_bulletin_board_client(int master_socket) {
                     }
                     free(tinfo);
 
-                    string response = getMasterOperationCompletionMessage();
+                    string response = getMasterOperationCompletionMessage(threadId);
                     if (response.empty()) {
                         sendMessage(3.2, joinTwoStringsWithDelimiter(ERROR, tokens[0].c_str(), ' '), "Syncronization Failed");
                     } else {
