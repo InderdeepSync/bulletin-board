@@ -2,7 +2,7 @@
 #ifndef BULLETIN_BOARD_SYNC_SERVER_H
 #define BULLETIN_BOARD_SYNC_SERVER_H
 
-int sync_server(char **argv);
+int sync_server(int port);
 
 void terminateSyncronizationThreadsAndCloseMasterSocket();
 

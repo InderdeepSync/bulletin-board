@@ -165,10 +165,9 @@ void reconfigureGlobalVariablesAndRestartSyncServer(string configurationFile) {
     startSyncServer();
 }
 
-int sync_server(char **argv) {
-    syncServerPort = atoi(argv[1]);
+int sync_server(int port) {
+    syncServerPort = port;
 
     startSyncServer();
-    pthread_exit(nullptr);
 }
 

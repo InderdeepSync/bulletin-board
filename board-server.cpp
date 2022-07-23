@@ -174,18 +174,12 @@ void reconfigureGlobalVariablesAndRestartBoardServer(string configurationFile) {
     startBulletinBoardServer();
 }
 
-int board_server(char **argv) {
-    bulletinBoardServerPort = atoi(argv[1]);
-    tmax = atoi(argv[2]);
-
-    int i = 3;
-    while (argv[i] != nullptr) {
-        peersList.emplace_back(argv[i]);
-        i++;
-    }
+int board_server(int port, int maxThreads, vector<string> peers) {
+    bulletinBoardServerPort = port;
+    tmax = maxThreads;
+    peersList = peers;
 
     startBulletinBoardServer();
-    pthread_exit(nullptr);
 }
 
 

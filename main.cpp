@@ -1,16 +1,13 @@
 #include <sys/wait.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
 #include <map>
-#include <pthread.h>
 #include <cstdio>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <thread>
 #include <set>
-#include <functional>
 #include <algorithm>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -173,32 +170,8 @@ int main(int argc, char **argv, char *envp[]) {
         peers.emplace_back(string(argv[i + optind]));
     }
 
-    unsigned long totalPeers = peers.size();
-    const char* board_server_arguments[totalPeers + 4];
-    board_server_arguments[0] = "executableName";
-    board_server_arguments[1] = strdup(std::to_string(bulletinBoardServerPort).c_str());
-    board_server_arguments[2] = strdup(std::to_string(tmax).c_str());
-
-    for (int i = 0; i < totalPeers; i++) {
-        board_server_arguments[i + 3] = peers[i].c_str();
-    }
-    board_server_arguments[totalPeers + 3] = nullptr;
-
-    pthread_t tt;
-    pthread_attr_t ta;
-    pthread_attr_init(&ta);
-    pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
-
-    if (pthread_create(&tt, &ta, (void* (*) (void*)) board_server, (void*)board_server_arguments) != 0) { //TODO: Remove these pthread_create calls here with direct calls(passing arguments) and remove pthread_exit inside them.
-        perror("pthread_create");
-        return 1;
-    }
-
-    char* sync_server_arguments[] = {"executableName", strdup(std::to_string(syncServerPort).c_str()), nullptr};
-    if (pthread_create(&tt, &ta, (void* (*) (void*)) sync_server, (void*)sync_server_arguments) != 0) {
-        perror("pthread_create");
-        return 1;
-    }
+    board_server(bulletinBoardServerPort, tmax, peers);
+    sync_server(syncServerPort);
 
     signal(SIGHUP, super_sighup_handler); // kill -HUP <Process ID>
     signal(SIGINT, super_sigquit_handler); // kill -INT <Process ID> or Ctrl + C
