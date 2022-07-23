@@ -116,7 +116,6 @@ void* handle_bulletin_board_client(void* arg) {
                         tinfo[i].peer = convertStringToCharArray(peer);
                         tinfo[i].user = convertStringToCharArray(user);
                         tinfo[i].req = req;
-                        tinfo[i].secondArgumentToOperation = convertStringToCharArray(tokens[1]);
                         tinfo[i].controller_thread_id = threadId;
 
                         if (pthread_create(&tinfo[i].thread_id, nullptr, &communicateWithPeer, &tinfo[i]) != 0) {
