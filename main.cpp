@@ -189,7 +189,7 @@ int main(int argc, char **argv, char *envp[]) {
     pthread_attr_init(&ta);
     pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
 
-    if (pthread_create(&tt, &ta, (void* (*) (void*)) board_server, (void*)board_server_arguments) != 0) {
+    if (pthread_create(&tt, &ta, (void* (*) (void*)) board_server, (void*)board_server_arguments) != 0) { //TODO: Remove these pthread_create calls here with direct calls(passing arguments) and remove pthread_exit inside them.
         perror("pthread_create");
         return 1;
     }

@@ -134,8 +134,8 @@ int createThreads(int numberOfThreads, void (*serverHandler)(int), void *handler
     return 0;
 }
 
-void cleanup_handler(void *arg ) {
-    int *socketToClose = (int *) arg;
+void cleanup_handler(void *arg) {
+    int *socketToClose = (int *)arg;
 
     shutdown(*socketToClose, SHUT_RDWR);
     close(*socketToClose);
@@ -158,7 +158,6 @@ ssize_t sendMessageToSocket(float code, const char responseText[], const char ad
 }
 
 const std::string WHITESPACE = " \n\r\t\f\v";
-
 
 std::string ltrim(const std::string &s) {
     size_t start = s.find_first_not_of(WHITESPACE);

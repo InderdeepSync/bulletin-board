@@ -1,7 +1,5 @@
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/resource.h>
 #include <map>
 #include <pthread.h>
 #include <cstdio>
@@ -12,7 +10,6 @@
 #include <set>
 #include <functional>
 #include <algorithm>
-#include <cassert>
 
 #include "tcp-utils.h"
 #include "utilities.h"
@@ -150,7 +147,7 @@ void handle_sync_server_client(int master_socket) {
 }
 
 void startSyncServer() {
-    syncronizationMasterSocket = createMasterSocket(syncServerPort);
+    syncronizationMasterSocket = createMasterSocket(syncServerPort); //TODO: Directly obtain masterSocket from global var instead of passing redundant argument
     printf("Syncronization Server up and listening on port %d.\n", syncServerPort);
 
     createThreads(NUMBER_OF_SYNCRONIZATION_THREADS, &handle_sync_server_client, (void*)syncronizationMasterSocket, syncServerThreads);

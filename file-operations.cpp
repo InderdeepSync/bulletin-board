@@ -1,18 +1,13 @@
-#include <array>
 #include <bits/stdc++.h>
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/resource.h>
-#include <map>
 #include <pthread.h>
 #include <cstdio>
 #include <string>
 #include <cstring>
 #include <vector>
-#include <iostream>
 #include <thread>
-#include <set>
 #include <functional>
 #include <algorithm>
 #include <cassert>
@@ -136,7 +131,11 @@ string writeOperation(const string &user, const string &message, bool holdLock, 
 }
 
 void readMessageFromFile(int messageNumberToRead, int socketToRespond) {
-    if (messageNumberToRead >= message_number or messageNumberToRead < 0) {
+    pthread_mutex_lock(&mut);
+    bool isMessageNumberToReadValid = messageNumberToRead < message_number and messageNumberToRead >= 0;
+    pthread_mutex_unlock(&mut);
+
+    if (not isMessageNumberToReadValid) {
         char additionalInfo[255];
         memset(additionalInfo, 0, sizeof additionalInfo);
         snprintf(additionalInfo, 255, "%d %s", messageNumberToRead, "The given message-number does not exist.");
