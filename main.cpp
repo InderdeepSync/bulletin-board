@@ -180,7 +180,7 @@ int main(int argc, char **argv, char *envp[]) {
     startSyncServer();
 
     signal(SIGHUP, super_sighup_handler); // kill -HUP <Process ID>
-    signal(SIGINT, super_sigquit_handler); // kill -INT <Process ID> or Ctrl + C
+//    signal(SIGINT, super_sigquit_handler); // kill -INT <Process ID> or Ctrl + C
     signal(SIGQUIT, super_sigquit_handler); // kill -QUIT <Process ID> or Ctrl + \ [Does not work on CLion for some reason]
 
     while(true) {

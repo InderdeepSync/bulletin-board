@@ -140,8 +140,8 @@ void* communicateWithPeer(void* arg) {
                 }
             }
             pthread_mutex_unlock(&peerCommunicationMutex);
-            if (threadIdStatsMapping[controllerThread].shouldAbort) { // Yes, we are accessing it without obtaining lock. It's not illegal.
-                debug_printf("One or more peers timed out or weren't READY. Sending ABORT to peer %s.\n", peer);
+            if (threadIdStatsMapping[controllerThread].shouldAbort) { // Yes, we are accessing it without obtaining lock. It's not illegal as no thread will modify it any further.
+                debug_printf("One or more peers timed out. Sending ABORT to peer %s.\n", peer);
                 sendMessage(5.0, ABORT, "");
                 break;
             } else {

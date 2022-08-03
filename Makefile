@@ -27,4 +27,4 @@ logger.o:
 	g++ -lpthread -c -o logger.o logger.cpp
 
 clean:
-	rm -f bbserv board-server.o super-server.o sync-server.o tcp-utils.o utilities.o file-operations.o logger.o peer-communication.o bbserv.log
+	rm -f bbserv board-server.o super-server.o sync-server.o tcp-utils.o utilities.o file-operations.o logger.o peer-communication.o bbserv.log bbserv.pid bbfile

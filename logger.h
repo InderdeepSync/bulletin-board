@@ -2,7 +2,7 @@
 #ifndef BULLETIN_BOARD_LOGGER_H
 #define BULLETIN_BOARD_LOGGER_H
 
-void setDebuggingPreference(bool isDelayEnabled);
+void setDebuggingPreference(bool shouldDebug);
 
 bool getDebuggingPreference();
 
