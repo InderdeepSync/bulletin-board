@@ -1,23 +1,32 @@
-MASTER:
+
+The syncronization protocol specification and nuances are as follows:
+
+Messages MASTER sends to slave:
     PRECOMMIT
     ABORT
 
     COMMIT
 
-    SUCCESS_NOOP
-    UNSUCCESS_UNDO
+    SUCCESS_NOOP: To convey that all other peers and the master were able to perform the commit.
+    UNSUCCESS_UNDO: To convey that either one or more peers or the master itself were unable to commit. The peer never needs to know if it was one of the peers or the master that failed.
 
-SLAVE:
+SLAVE responds via the following:
     READY
 
-    COMMIT_SUCCESS
-    COMMIT_UNSUCCESS -> goes to idle
+    COMMIT_SUCCESS: To convey that the operation was successful without any errors.
+    COMMIT_UNSUCCESS: Due to some internal server issues, the operation failed to commit.
 
 
-Possible Flows:
+NOTE:
+      1. A WRITE command at the peer should ideally always succeed. Also, we validate the existence of the messageNumber to be REPLACEd on the master, before we even start the syncronization.
+      So, the only reason the COMMIT command would ever fail at the peer is if something dire has happened to the bbfile itself. We have simulated such a scenario with => chmod ug-rw bbfile.
+      This could be considered as corrupting the database file, although this is highly contrived.
+      2. There is no such message as NOT_READY in our implementation. A timeout on the master would automatically imply negative acknowledgement.
 
 
-1. [DONE]
+Possible Flows and exchange of messages [All have been tested]:
+
+1.
     i (a). Connection is refused by one or more peers; may be due to either a network partition or simply that the node is down.
     OR
     i (b). Connection to all Peers is successful but one or more peers takes too much time to respond to PRECOMMIT by READY [Simulate by adding sleep(3)]
@@ -26,19 +35,19 @@ Possible Flows:
 NOTE: There is no scenario where the slave peer consciously responds NOT_READY.
       If it is able to receive incoming connection from the master, it is assumed to be READY for whatever else may come.
 
-2. [DONE]
+2.
     i. All Peers acknowledge READY. Master sends COMMIT message with command to perform.
     ii (a). One or more peers takes too much time to respond to COMMIT.
     OR
     ii (b). One or more peers responds with COMMIT_UNSUCCESS.
     iii. Master does not perform operation itself and sends UNSUCCESS_UNDO to those peers that responded with COMMIT_SUCCESS.
 
-3. [DONE]
+3.
     i. All Peers acknowledge READY. Master sends COMMIT message with command to perform.
     ii. All peers respond with COMMIT_SUCCESS.
     iii. Master fails to perform operation successfully and sends UNSUCCESS_UNDO to all peers.
 
-4. [DONE]
+4.
     i. All Peers acknowledge READY. Master sends COMMIT message with command to perform.
     ii. All peers respond with COMMIT_SUCCESS.
     iii. Master performs operation successfully and sends SUCCESS_NOOP to all peers.
@@ -49,13 +58,13 @@ NOTE: There is no scenario where the slave peer consciously responds NOT_READY.
     ii. At some point in the future, master would send() either ABORT or COMMIT to the peer. This system call would fail with return value -1, though we do not check.
         a) If the message the master was attempting to send to the peer was ABORT, we close our side of the connection. There is nothing more to do.
         b) Otherwise, we attempt to optimistically block again on recv_block, hoping to get a response (either COMMIT_SUCCESS or COMMIT_UNSUCCESS).
-        However, we soon realize that the connection has been closed by the other side. We simply notify other threads of this, so that COMMIT_UNSUCCESS may be sent to other peers that have performed the operation.
-
+        However, we soon realize that the connection has been closed by the other side (recv_nonblock return with n = 0). We simply notify other threads of this, so that COMMIT_UNSUCCESS may be sent to other peers that may have performed the operation.
+        Although it may be possible that other peers also timed out. Either way, we make sure to not have any loose ends on EITHER side.
 
 6.
     i. It takes too long for the master to send either SUCCESS_NOOP or UNSUCCESS_UNDO message to peer after receiving COMMIT_SUCCESS acknowledgement.
        Peer times out, assumes something is wrong, undoes operation, releases lock and closes connection.
     ii. At some point in the future, master would attempt to send() either SUCCESS_NOOP or UNSUCCESS_UNDO to peer. This system call would fail with return value -1, though we do not check.
-    In The two-phase protocol, the master does not confirm the receipt of these messages from the peers. Hence, there is nothing else to do but termminate the thread communicating with the peer.
+    In The two-phase protocol, the master does not confirm the receipt of these final success/unsuccess messages from the peers. Hence, there is nothing else to do but termminate the thread communicating with the peer.
 
-    NOTE: There is a possibility that the peer, having timed out, doesn't receive the late SUCCESS_NOOP sent by master, and undoes an operation that it should not have. The three-phase commit overcomes this weakness.
+    NOTE: There is a possibility that the peer, having timed out and closed the socket, doesn't receive (the late) SUCCESS_NOOP sent by master, and undoes an operation that it should not have, leading to an inconsistency in the bbfile state across nodes.
